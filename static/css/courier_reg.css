@@ -1,0 +1,52 @@
+html,
+body {
+  height: 100%;
+}
+
+body {
+  font-family: "Poppins", "Helvetica", sans-serif;
+}
+
+.card-registration {
+  border-radius: 15px;
+  box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.15);
+}
+
+.card-registration .form-control {
+  border-radius: 10px;
+  min-height: 52px;
+}
+
+.card-registration label {
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.card-registration .select-input.form-control[readonly]:not([disabled]) {
+  font-size: 1rem;
+  line-height: 2.15;
+  padding-left: 0.75em;
+  padding-right: 0.75em;
+}
+
+.card-registration .select-arrow {
+  top: 13px;
+}
+
+.courier-cover {
+  border-top-left-radius: 0.25rem;
+  border-bottom-left-radius: 0.25rem;
+  height: 100%;
+  object-fit: cover;
+}
+
+.alert {
+  border-radius: 0.65rem;
+}
+
+@media (max-width: 1199.98px) {
+  .courier-cover {
+    display: none;
+  }
+}

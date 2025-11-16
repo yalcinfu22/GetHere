@@ -26,6 +26,7 @@ def insert_user():
                 values = (id, name, email, password, age, gender,
                           marital_status, occupation, monthly_income, city,
                           address)
+                          
                 mycursor.execute(query, values)
             i = 1
         mydb.commit()
@@ -113,7 +114,7 @@ def insert_orders():
 
 
 ## This function is insert menu from menu.csv
-def insert_menu_from_csv(csv_path="menu.csv"):
+def insert_menu_from_csv(csv_path="raw_data/menu.csv"):
     with open(csv_path, mode="r", encoding="utf-8") as f:
         reader = csv.DictReader(f)
         for row in reader:
@@ -123,6 +124,11 @@ def insert_menu_from_csv(csv_path="menu.csv"):
             cuisine = row.get("cuisine")
             price = float(
                 row["price"]) if row.get("price") not in (None, "") else None
+            
+            mycursor.execute("SELECT 1 FROM Food WHERE f_id=%s", (f_id,))
+            if not mycursor.fetchone():
+                print(f"[WARN] Skipping Menu row menu_id={menu_id}, f_id={f_id} (Food missing)")
+                continue
 
             mycursor.execute(
                 """
@@ -134,7 +140,25 @@ def insert_menu_from_csv(csv_path="menu.csv"):
     mydb.close()
 
 
-def insert_Restaurant_from_csv(csv_path="raw_data/restaurant.csv"):
+def insert_food_from_csv(csv_path="raw_data/food.csv"):
+    with open(csv_path, mode="r", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            f_id = row.get("f_id")
+            item = row.get("item")
+            veg  = row.get("veg_or_non_veg")
+            if not f_id or not item:
+                continue
+            mycursor.execute(
+                """
+                INSERT IGNORE INTO Food (f_id, item, veg_or_non_veg)
+                VALUES (%s, %s, %s)
+                """,
+                (f_id, item, veg),
+            )
+    mydb.commit()
+
+def insert_Restaurant_from_csv(csv_path="restaurant.csv"):
     with open(csv_path, mode="r", encoding="utf-8") as f:
         reader = csv.DictReader(f)
         for row in reader:

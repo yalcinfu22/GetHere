@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Courier Sign up</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+      integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
+      crossorigin="anonymous"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/courier_reg.css') }}"
+    />
+  </head>
+  <body>
+    <section class="h-100 bg-dark">
+      <form action="/courier_submit_form" method="POST">
+        <div class="container py-5 h-100">
+          <div class="row d-flex justify-content-center align-items-center h-100">
+            <div class="col">
+              <div class="card card-registration my-4">
+                <div class="row g-0">
+                  <div class="col-xl-6 d-none d-xl-block">
+                    <img
+                      src="{{ url_for('static', filename='images/courier_reg_img.png') }}"
+                      alt="Courier on bike"
+                      class="img-fluid courier-cover"
+                    />
+                  </div>
+                  <div class="col-xl-6">
+                    <div class="card-body p-md-5 text-black">
+                      <h3 class="mb-2 text-uppercase">Signup as Courier</h3>
+                      <p class="text-muted small mb-4">
+                        Join our delivery fleet and start earning in just a few
+                        minutes. Tell us a bit about yourself so we can create
+                        your courier profile.
+                      </p>
+                      {% set form_values = form_values or {} %}
+                      {% if error %}
+                      <div class="alert alert-danger" role="alert">
+                        {{ error }}
+                      </div>
+                      {% elif success %}
+                      <div class="alert alert-success" role="alert">
+                        Welcome aboard, {{ courier_name }}! Your profile was
+                        created successfully.
+                      </div>
+                      {% endif %}
+                      <div class="row">
+                        <div class="col-md-6 mb-4">
+                          <div class="form-outline" data-mdb-input-init>
+                            <input
+                              type="text"
+                              class="form-control form-control-lg"
+                              placeholder="e.g., Furkan"
+                              name="first_name"
+                              value="{{ form_values.get('first_name', '') }}"
+                              required
+                            />
+                            <label class="form-label">First name</label>
+                          </div>
+                        </div>
+                        <div class="col-md-6 mb-4">
+                          <div class="form-outline" data-mdb-input-init>
+                            <input
+                              type="text"
+                              class="form-control form-control-lg"
+                              placeholder="e.g., Yalcin"
+                              name="last_name"
+                              value="{{ form_values.get('last_name', '') }}"
+                              required
+                            />
+                            <label class="form-label">Last name</label>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="row">
+                        <div class="col-md-6 mb-4">
+                          <div class="form-outline" data-mdb-input-init>
+                            <input
+                              type="email"
+                              class="form-control form-control-lg"
+                              placeholder="e.g., furkan@mail.com"
+                              name="email"
+                              value="{{ form_values.get('email', '') }}"
+                              required
+                            />
+                            <label class="form-label">Email</label>
+                          </div>
+                        </div>
+                        <div class="col-md-6 mb-4">
+                          <div class="form-outline" data-mdb-input-init>
+                            <input
+                              type="password"
+                              class="form-control form-control-lg"
+                              placeholder="Min. 8 characters"
+                              name="password"
+                              required
+                            />
+                            <label class="form-label">Password</label>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="row">
+                        <div class="col-md-6 mb-4">
+                          <div class="form-outline" data-mdb-input-init>
+                            <input
+                              type="number"
+                              min="18"
+                              class="form-control form-control-lg"
+                              placeholder="e.g., 21"
+                              name="age"
+                              value="{{ form_values.get('age', '') }}"
+                            />
+                            <label class="form-label">Age</label>
+                          </div>
+                        </div>
+                        <div class="col-md-6 mb-4">
+                          <div class="form-outline" data-mdb-input-init>
+                            <input
+                              type="number"
+                              min="0"
+                              class="form-control form-control-lg"
+                              placeholder="Years of experience"
+                              name="experience"
+                              value="{{ form_values.get('experience', '') }}"
+                            />
+                            <label class="form-label">Courier Experience</label>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="d-md-flex justify-content-start align-items-center mb-4 py-2">
+                        <h6 class="mb-0 me-4">Gender:</h6>
+                        <div class="form-check form-check-inline mb-0 me-4">
+                          <input
+                            class="form-check-input"
+                            type="radio"
+                            name="gender"
+                            value="Female"
+                            {% if form_values.get('gender') == 'Female' %}checked{% endif %}
+                          />
+                          <label class="form-check-label">Female</label>
+                        </div>
+                        <div class="form-check form-check-inline mb-0 me-4">
+                          <input
+                            class="form-check-input"
+                            type="radio"
+                            name="gender"
+                            value="Male"
+                            {% if form_values.get('gender') == 'Male' %}checked{% endif %}
+                          />
+                          <label class="form-check-label">Male</label>
+                        </div>
+                      </div>
+                      <div class="d-md-flex justify-content-start align-items-center mb-4 py-2">
+                        <h6 class="mb-0 me-4">Marital Status:</h6>
+                        <div class="form-check form-check-inline mb-0 me-4">
+                          <input
+                            class="form-check-input"
+                            type="radio"
+                            name="marital_status"
+                            value="Married"
+                            {% if form_values.get('marital_status') == 'Married' %}checked{% endif %}
+                          />
+                          <label class="form-check-label">Married</label>
+                        </div>
+                        <div class="form-check form-check-inline mb-0 me-4">
+                          <input
+                            class="form-check-input"
+                            type="radio"
+                            name="marital_status"
+                            value="Single"
+                            {% if form_values.get('marital_status') == 'Single' %}checked{% endif %}
+                          />
+                          <label class="form-check-label">Single</label>
+                        </div>
+                      </div>
+                      <div class="d-flex justify-content-end pt-3">
+                        <button type="reset" class="btn btn-light btn-lg">
+                          Reset all
+                        </button>
+                        <button
+                          type="submit"
+                          class="btn btn-warning btn-lg ms-2"
+                        >
+                          Submit form
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </form>
+    </section>
+  </body>
+</html>

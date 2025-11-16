@@ -1,14 +1,15 @@
 from flask import current_app, render_template,request,redirect,url_for
 import mysql.connector
 from flask import jsonify
-
+import bcrypt
+from helpers import db_helper
 def home_page():
         try:
             db = mysql.connector.connect(
-                host="",
-                user="",
-                password="",
-                database=""
+                host="localhost",
+                user="root",
+                password="123654",
+                database="term_project"
             )
             db.close()
             return jsonify({"status": "online", "message": "API is running and DB connection is successful."})
@@ -24,6 +25,20 @@ def  user_submit_signup_form():
      city = request.form.get("city")
      email = request.form.get("email")
      gender = request.form.get("gender")
-     print(gender)
+     salary = request.form.get("salary")
+     status = request.form.get("martial_status")
+     occupation = request.form.get("occupation")
+     age = request.form.get("age")
+     db = db_helper.get_db_connection("localhost", "root", "227maram","term_project")
+     query = (
+                    "INSERT INTO `user` "
+                    "(user_name, email, password, age, gender, martial_status, occuption, monthly_income, city, address) "
+                    "VALUES ( %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)")
+     values = (first_name + " " + last_name, email, password, age, gender,
+                          status, occupation, salary, city,
+                          address)
+     mycursor = db.cursor()
+     mycursor.execute(query, values)
+     db.commit()
      return redirect(url_for("home_page"))
      
