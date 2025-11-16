@@ -6,10 +6,10 @@ from helpers import db_helper
 def home_page():
         try:
             db = mysql.connector.connect(
-                host="",
-                user="",
-                password="",
-                database=""
+                host="localhost",
+                user="root",
+                password="123654",
+                database="term_project"
             )
             db.close()
             return jsonify({"status": "online", "message": "API is running and DB connection is successful."})
