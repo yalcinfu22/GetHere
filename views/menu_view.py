@@ -89,7 +89,8 @@ def get_menu_item(m_id):
             FROM Menu m
             LEFT JOIN Food f ON m.f_id = f.f_id
             WHERE m.m_id = %s
-        """, (m_id,))        row = cur.fetchone()
+        """, (m_id,))
+        row = cur.fetchone()
         if row:
             return jsonify(row)
         return jsonify({"error": "Menu item not found"}), 404
