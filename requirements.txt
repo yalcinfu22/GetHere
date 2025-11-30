@@ -1,0 +1,9 @@
+Flask
+python-dotenv
+mysql-connector-python
+blinker
+click
+itsdangerous
+jinja2
+markupsafe
+werkzeug

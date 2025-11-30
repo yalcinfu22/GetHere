@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Courier Home - GetHere</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    
+    <style>
+        :root {
+            --courier-blue: #3498DB;
+            --courier-dark-blue: #2980B9;
+            --premium-gold: #FFC107;
+            --text-dark: #2C3E50;
+        }
+
+        body { 
+            background: linear-gradient(135deg, #E3F2FD 0%, #F0F8FF 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding-top: 30px;
+            padding-bottom: 50px;
+        }
+
+        .dashboard-card {
+            background: white;
+            border-radius: 20px;
+            border: none;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05); 
+            overflow: hidden;
+            transition: transform 0.3s ease;
+        }
+
+        /* --- PROFILE CARD --- */
+        .profile-card {
+            background: linear-gradient(135deg, var(--courier-blue), var(--courier-dark-blue));
+            color: white;
+            padding: 25px 20px;
+            cursor: pointer;
+        }
+
+        .profile-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .profile-avatar {
+            width: 60px; height: 60px;
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(5px);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            font-size: 1.8rem;
+        }
+
+        .profile-info h5 { margin: 0; font-weight: 700; font-size: 1.2rem; }
+
+        .settings-badge {
+            font-size: 0.75rem;
+            background: rgba(0,0,0,0.2);
+            padding: 3px 10px;
+            border-radius: 20px;
+            display: inline-block;
+            margin-top: 4px;
+        }
+
+        /* --- UPDATED RATING BOX (Mobile Game Style) --- */
+        .stats-row {
+            display: flex;
+            justify-content: space-between;
+            background: rgba(0, 0, 0, 0.15);
+            border-radius: 15px;
+            padding: 12px 15px;
+            align-items: center;
+        }
+
+        .stat-item { text-align: center; flex: 1; }
+        
+        .stat-divider {
+            width: 1px; height: 35px; background: rgba(255,255,255,0.2);
+        }
+
+        .rating-value {
+            font-size: 1.5rem; /* Bigger Number */
+            font-weight: 800;
+            line-height: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+        }
+
+        .rating-star-icon {
+            color: var(--premium-gold);
+            font-size: 1.2rem;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+        }
+
+        /* The Count (e.g., (120)) */
+        .stat-subtext {
+            font-size: 0.85rem;
+            opacity: 0.8;
+            margin-top: 4px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        .count-value { font-size: 1.2rem; font-weight: 700; }
+        .count-label { font-size: 0.75rem; opacity: 0.8; margin-top: 2px; }
+
+        /* --- OTHER SECTIONS --- */
+        .reviews-wrapper { padding: 20px; margin-top: 20px; }
+        .nav-btn {
+            display: block; width: 100%; background: white; color: var(--courier-dark-blue);
+            border: 2px solid #e9ecef; padding: 12px; border-radius: 12px; font-weight: 600;
+            text-decoration: none; text-align: center; transition: all 0.2s ease;
+        }
+        .nav-btn:hover, .nav-btn.active {
+            border-color: var(--courier-blue); background: linear-gradient(135deg, var(--courier-blue), var(--courier-dark-blue)); color: white;
+        }
+        .nav-btn.disabled { background: #f8f9fa; color: #bdc3c7; border-color: #ecf0f1; pointer-events: none; }
+        .tasks-wrapper { padding: 25px; }
+        .btn-action { color: var(--courier-blue); border: 2px solid var(--courier-blue); border-radius: 50px; padding: 4px 15px; font-size: 0.8rem; font-weight: 600; text-decoration: none; }
+        .btn-action:hover { background: var(--courier-blue); color: white; }
+    </style>
+</head>
+<body>
+
+<div class="container-fluid px-4 px-lg-5">
+    <div class="row g-4">
+        
+        <div class="col-lg-3 col-md-4">
+            
+            <div class="dashboard-card profile-card" onclick="window.location.href='{{ url_for('courier.profile_page') }}'">
+                
+                <div class="profile-header">
+                    <div class="profile-avatar">
+                        <i class="bi bi-person-fill"></i>
+                    </div>
+                    <div class="profile-info">
+                        <h5>{{ courier.name }} {{ courier.surname }}</h5>
+                        <div class="settings-badge">
+                            <i class="bi bi-gear-fill me-1"></i> Account
+                        </div>
+                    </div>
+                </div>
+
+                <div class="stats-row">
+                    <div class="stat-item">
+                        <div class="rating-value">
+                            {{ courier.rating }} <i class="bi bi-star-fill rating-star-icon"></i>
+                        </div>
+                        <div class="stat-subtext">
+                            ({{ courier.ratingCount }})
+                        </div>
+                    </div>
+
+                    <div class="stat-divider"></div>
+
+                    <div class="stat-item">
+                        <div class="count-value">
+                            {{ courier.taskCount }}
+                        </div>
+                        <div class="count-label">
+                            Deliveries
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="dashboard-card reviews-wrapper">
+                <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+                    <span class="fw-bold text-secondary small text-uppercase">Recent History</span>
+                    <i class="bi bi-clock-history text-muted"></i>
+                </div>
+                
+                <div class="table-responsive">
+                    <table class="table table-borderless table-sm mb-0">
+                        <thead class="text-muted small">
+                            <tr><th>Order</th><th>Rate</th><th>Item</th></tr>
+                        </thead>
+                        <tbody>
+                            {% if reviews %}
+                                {% for review in reviews %}
+                                <tr class="review-row" data-url="{{ url_for('courier.delivery_history_page') }}">
+                                    <td>#{{ review.t_id }}</td>
+                                    <td><i class="bi bi-star-fill text-warning small"></i> {{ review.rating }}</td>
+                                    <td class="text-truncate" style="max-width: 80px;">{{ review.menu_name }}</td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="3" class="text-center text-muted py-3 small">
+                                        No history yet
+                                    </td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-9 col-md-8">
+            <div class="row mb-4 g-3">
+                <div class="col-md-4"><a href="{{ url_for('courier.active_tasks_page') }}" class="nav-btn active"><i class="bi bi-clipboard-data me-2"></i>Tasks Dashboard</a></div>
+                <div class="col-md-4">
+                    {% if courier.r_id %}
+                        <a href="{{ url_for('courier.my_restaurant_page') }}" class="nav-btn"><i class="bi bi-shop me-2"></i>My Restaurant</a>
+                    {% else %}
+                        <span class="nav-btn disabled"><i class="bi bi-shop-window me-2"></i>Restaurant (N/A)</span>
+                    {% endif %}
+                </div>
+                <div class="col-md-4"><a href="{{ url_for('courier.search_positions_page') }}" class="nav-btn"><i class="bi bi-search me-2"></i>Search Jobs</a></div>
+            </div>
+
+            <div class="dashboard-card tasks-wrapper">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h5 class="mb-0 text-dark fw-bold"><i class="bi bi-bicycle me-2 text-primary"></i>Active Deliveries</h5>
+                    <span class="badge rounded-pill bg-light text-dark border">{{ active_tasks|length }} Active</span>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="bg-light text-secondary small text-uppercase">
+                            <tr><th>Order ID</th><th>Menu Item</th><th>Address</th><th>Contact</th><th class="text-end">Status</th></tr>
+                        </thead>
+                        <tbody>
+                            {% if active_tasks %}
+                                {% for task in active_tasks %}
+                                <tr>
+                                    <td class="text-primary fw-bold">#{{ task.t_id }}</td>
+                                    <td><span class="d-block fw-semibold">{{ task.menu_name }}</span><small class="text-muted">{{ task.customer_name }}</small></td>
+                                    <td>{{ task.address }}</td>
+                                    <td>{{ task.phone }}</td>
+                                    <td class="text-end"><a href="#" class="btn-action">Details</a></td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr><td colspan="5" class="text-center py-5 text-muted">All caught up! No active deliveries.</td></tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        document.querySelectorAll(".review-row").forEach(row => {
+            row.addEventListener("click", () => {
+                const url = row.getAttribute("data-url");
+                if(url) window.location.href = url;
+            });
+        });
+    });
+</script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

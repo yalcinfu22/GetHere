@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <title>Restaurant Menu - GetHere</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+  <style>
+    :root {
+      --navbar-height: 56px;
+      --primary-color: #ff6b35;
+      --secondary-color: #f7931e;
+    }
+
+    html,
+    body {
+      height: 100%;
+      overflow-x: hidden;
+      background-color: #f8f9fa;
+    }
+
+    /* Navbar */
+    .navbar {
+      min-height: var(--navbar-height);
+      background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+      padding: 0.5rem 0;
+    }
+
+    .navbar-brand {
+      font-size: 1.3rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: -0.5px;
+    }
+
+    .nav-link {
+      font-size: 0.85rem;
+      font-weight: 500;
+      padding: 0.35rem 0.75rem !important;
+      transition: all 0.3s ease;
+      position: relative;
+    }
+
+    .nav-link:hover {
+      color: var(--primary-color) !important;
+      transform: translateY(-2px);
+    }
+
+    .nav-link.active {
+      color: var(--primary-color) !important;
+    }
+
+    /* Buttons */
+    .btn-cart {
+      border-radius: 20px;
+      padding: 0.35rem 1rem;
+      border: 2px solid #e9ecef;
+      background: white;
+      font-weight: 500;
+      transition: all 0.3s ease;
+      font-size: 0.85rem;
+    }
+
+    .btn-cart:hover {
+      border-color: var(--primary-color);
+      color: var(--primary-color);
+      transform: translateY(-2px);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+      border: none;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
+    }
+
+    .btn-outline-primary,
+    .btn-danger {
+      border-radius: 20px;
+      padding: 0.35rem 1.2rem;
+      font-size: 0.85rem;
+      font-weight: 500;
+    }
+
+    /* Page Specific Styles */
+    .hover-shadow:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 .5rem 1rem rgba(0, 0, 0, .15) !important;
+    }
+
+    .transition-all {
+      transition: all 0.3s ease;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- NAVBAR -->
+  <nav class="navbar navbar-expand-lg sticky-top">
+    <div class="container">
+      <a class="navbar-brand" href="{{ url_for('home_page.home_page') }}">
+        <i class="bi bi-basket2-fill"></i> GetHere
+      </a>
+
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNavbar"
+        aria-controls="mainNavbar" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+
+      <div class="collapse navbar-collapse" id="mainNavbar">
+        <ul class="navbar-nav me-auto mb-2 mb-lg-0 ms-3">
+          <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('home_page.home_page') }}">
+              <i class="bi bi-house-door"></i> Home
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('home_page.home_page') }}#restaurantsSection">
+              <i class="bi bi-shop"></i> Restaurants
+            </a>
+          </li>
+        </ul>
+
+        <div class="d-flex flex-column flex-lg-row align-items-lg-center gap-2 mt-3 mt-lg-0">
+          <div class="d-flex align-items-center gap-2 flex-wrap">
+            <a href="#" class="btn btn-cart">
+              <i class="bi bi-cart3"></i> Cart <span class="badge bg-danger ms-1">{{ cart_count or 0 }}</span>
+            </a>
+
+            {% if current_user is defined and current_user.is_authenticated %}
+            <a href="#" class="btn btn-outline-primary">
+              <i class="bi bi-person-circle"></i> {{ current_user.username or 'Profile' }}
+            </a>
+            <a href="#" class="btn btn-danger">
+              <i class="bi bi-box-arrow-right"></i> Logout
+            </a>
+            {% else %}
+            <div class="btn-group">
+              <button type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown"
+                aria-expanded="false">
+                <i class="bi bi-box-arrow-in-right"></i> Login
+              </button>
+              <ul class="dropdown-menu dropdown-menu-end">
+                <li><a class="dropdown-item" href="{{ url_for('user.user_login') }}"><i class="bi bi-person"></i> As
+                    User</a></li>
+                <li><a class="dropdown-item" href="{{ url_for('courier.courier_login') }}"><i class="bi bi-bicycle"></i>
+                    As Courier</a></li>
+                <li><a class="dropdown-item" href="{{ url_for('restaurant.restaurant_login') }}"><i
+                      class="bi bi-shop"></i> As Restaurant</a></li>
+              </ul>
+            </div>
+            <div class="btn-group">
+              <button type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown"
+                aria-expanded="false">
+                <i class="bi bi-person-plus"></i> Sign Up
+              </button>
+              <ul class="dropdown-menu dropdown-menu-end">
+                <li><a class="dropdown-item" href="{{ url_for('user.user_signup') }}"><i class="bi bi-person"></i> As
+                    User</a></li>
+                <li><a class="dropdown-item" href="{{ url_for('courier.courier_signup') }}"><i
+                      class="bi bi-bicycle"></i> As Courier</a></li>
+                <li><a class="dropdown-item" href="{{ url_for('restaurant.restaurant_signup') }}"><i
+                      class="bi bi-shop"></i> As Restaurant</a></li>
+              </ul>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- CONTENT -->
+  <div class="container py-4">
+    <!-- Header Section -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <div>
+        <h1 class="h2 mb-1">Restaurant Menu</h1>
+        <p class="text-muted">Explore our delicious offerings</p>
+      </div>
+      <!-- Add Button (Visible only to Manager) -->
+      <button id="btnAdd" class="btn btn-primary shadow-sm" {% if not is_manager %}style="display:none" {% endif %}>
+        <i class="bi bi-plus-lg me-2"></i>Add Menu Item
+      </button>
+    </div>
+
+    <!-- Menu Grid -->
+    <div id="menu-cards" class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+      <!-- Menu items will be injected here -->
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+  <script>
+    const rId = JSON.parse('{{ r_id | tojson }}');
+    const isManager = JSON.parse('{{ is_manager | tojson }}');
+
+    async function loadMenus() {
+      try {
+        const res = await fetch(`/menus/search?r_id=${rId}&order_by=price&order=asc&limit=100`);
+        const data = await res.json();
+        const wrap = document.getElementById('menu-cards');
+        wrap.innerHTML = '';
+
+        if (data.length === 0) {
+          wrap.innerHTML = '<div class="col-12 text-center text-muted py-5">No menu items found.</div>';
+          return;
+        }
+
+        data.forEach(m => {
+          const actions = isManager ? `
+          <div class="card-footer bg-transparent border-0 pt-0 pb-3">
+            <div class="d-flex gap-2">
+                <button class="btn btn-sm btn-outline-secondary flex-grow-1" onclick="editMenu(${m.m_id}, ${m.price})">
+                    <i class="bi bi-pencil me-1"></i>Update
+                </button>
+                <button class="btn btn-sm btn-outline-danger flex-grow-1" onclick="delMenu(${m.m_id})">
+                    <i class="bi bi-trash me-1"></i>Delete
+                </button>
+            </div>
+          </div>` : '';
+
+          const card = `
+          <div class="col">
+            <div class="card h-100 shadow-sm border-0 hover-shadow transition-all">
+              <!-- Placeholder Image -->
+              <div class="bg-light d-flex align-items-center justify-content-center" style="height: 200px; border-radius: 0.375rem 0.375rem 0 0;">
+                  <i class="bi bi-cup-hot text-secondary" style="font-size: 3rem;"></i>
+              </div>
+              
+              <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <h5 class="card-title mb-0 fw-bold text-dark">${m.food_name || '(Unnamed)'}</h5>
+                    <span class="badge bg-success bg-opacity-10 text-success rounded-pill">${m.price?.toFixed ? m.price.toFixed(2) : m.price} ₺</span>
+                </div>
+                <p class="card-text small text-muted mb-2">
+                    <i class="bi bi-tag me-1"></i>${m.cuisine || 'General'} 
+                    <span class="mx-1">·</span> 
+                    ${m.veg || ''}
+                </p>
+              </div>
+              ${actions}
+            </div>
+          </div>
+        `;
+          wrap.insertAdjacentHTML('beforeend', card);
+        });
+      } catch (err) {
+        console.error("Error loading menus:", err);
+        document.getElementById('menu-cards').innerHTML = '<div class="col-12 text-center text-danger">Failed to load menu items.</div>';
+      }
+    }
+
+    async function delMenu(mId) {
+      if (!confirm('Delete this menu item?')) return;
+      const res = await fetch(`/menus/${mId}`, { method: 'DELETE' });
+      if (res.ok) loadMenus();
+    }
+
+    async function editMenu(mId, oldPrice) {
+      const price = prompt('New price:', oldPrice);
+      if (price === null) return;
+      const res = await fetch(`/menus/${mId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ price: parseFloat(price) })
+      });
+      if (res.ok) loadMenus();
+    }
+
+    document.getElementById('btnAdd').onclick = async () => {
+      const foodName = prompt('Food name:');
+      if (!foodName) return;
+      const price = parseFloat(prompt('Price:') || '0');
+      const veg = prompt('Veg/Non-Veg/Other (optional):') || null;
+      const cuisine = prompt('Cuisine (optional):') || null;
+
+      const res = await fetch('/menus/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ r_id: rId, food_name: foodName, veg_or_non_veg: veg, cuisine, price })
+      });
+      if (res.ok) {
+        loadMenus();
+      } else {
+        const err = await res.json();
+        alert('Error adding menu: ' + (err.error || 'Unknown error'));
+      }
+    };
+
+    document.addEventListener('DOMContentLoaded', loadMenus);
+  </script>
+
+</body>
+
+</html>

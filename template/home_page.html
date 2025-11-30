@@ -1,0 +1,790 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>{% block title %}GetHere - Food Delivery{% endblock %}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+        rel="stylesheet"
+    >
+    
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+    <style>
+        :root {
+            --navbar-height: 56px; /* 70% of 80px */
+            --primary-color: #ff6b35;
+            --secondary-color: #f7931e;
+        }
+
+        html, body {
+            height: 100%;
+            overflow-x: hidden;
+        }
+
+        /* Navbar - 70% smaller */
+        .navbar {
+            min-height: var(--navbar-height);
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            padding: 0.5rem 0;
+        }
+
+        .navbar-brand {
+            font-size: 1.3rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: -0.5px;
+        }
+
+        .navbar-brand i {
+            font-size: 1.3rem;
+        }
+
+        .nav-link {
+            font-size: 0.85rem;
+            font-weight: 500;
+            padding: 0.35rem 0.75rem !important;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .nav-link:hover {
+            color: var(--primary-color) !important;
+            transform: translateY(-2px);
+        }
+
+        .nav-link.active {
+            color: var(--primary-color) !important;
+        }
+
+        .nav-link.active::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 24px;
+            height: 2px;
+            background: var(--primary-color);
+            border-radius: 2px;
+        }
+
+        .nav-link i {
+            font-size: 0.9rem;
+        }
+
+        /* Search Bar */
+        .search-wrapper {
+            position: relative;
+            min-width: 240px;
+        }
+
+        .search-wrapper input {
+            border-radius: 20px;
+            padding: 0.4rem 0.9rem 0.4rem 2.2rem;
+            border: 2px solid #e9ecef;
+            transition: all 0.3s ease;
+            font-size: 0.85rem;
+        }
+
+        .search-wrapper input:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.15rem rgba(255, 107, 53, 0.15);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 0.8rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+
+        /* Buttons */
+        .btn-cart {
+            border-radius: 20px;
+            padding: 0.35rem 1rem;
+            border: 2px solid #e9ecef;
+            background: white;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            font-size: 0.85rem;
+        }
+
+        .btn-cart:hover {
+            border-color: var(--primary-color);
+            color: var(--primary-color);
+            transform: translateY(-2px);
+        }
+
+        .btn-cart i {
+            font-size: 0.95rem;
+        }
+
+        .btn-cart .badge {
+            font-size: 0.7rem;
+            padding: 0.2rem 0.4rem;
+        }
+
+        .dropdown-toggle {
+            border-radius: 20px;
+            padding: 0.35rem 1.2rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            font-size: 0.85rem;
+        }
+
+        .dropdown-toggle i {
+            font-size: 0.9rem;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            border: none;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
+        }
+
+        .btn-outline-primary,
+        .btn-danger {
+            border-radius: 20px;
+            padding: 0.35rem 1.2rem;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        .dropdown-menu {
+            border-radius: 10px;
+            border: none;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+            padding: 0.4rem;
+        }
+
+        .dropdown-item {
+            border-radius: 6px;
+            padding: 0.5rem 0.9rem;
+            transition: all 0.2s ease;
+            font-size: 0.85rem;
+        }
+
+        .dropdown-item:hover {
+            background: #fff5f2;
+            color: var(--primary-color);
+        }
+
+        .dropdown-item i {
+            font-size: 0.9rem;
+            margin-right: 0.3rem;
+        }
+
+        /* Carousel */
+        #homeCarousel {
+            height: calc(100vh - var(--navbar-height));
+            transition: height 0.5s ease, margin-bottom 0.5s ease;
+        }
+
+        #homeCarousel.shrink {
+            height: calc((100vh - var(--navbar-height)) * 0.7);
+            margin-bottom: 3rem;
+        }
+
+        #homeCarousel .carousel-inner,
+        #homeCarousel .carousel-item {
+            height: 100%;
+        }
+
+        #homeCarousel .carousel-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            filter: brightness(0.85);
+        }
+
+        #homeCarousel .carousel-caption {
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(10px);
+            border-radius: 1rem;
+            padding: 2rem 2.5rem;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        #homeCarousel .carousel-caption h5 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        #homeCarousel .carousel-caption p {
+            font-size: 1.2rem;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+        }
+
+        #homeCarousel.shrink .carousel-caption h5 {
+            font-size: 1.5rem;
+        }
+
+        #homeCarousel.shrink .carousel-caption p {
+            font-size: 0.9rem;
+        }
+
+        /* Carousel Controls */
+        .carousel-control-prev-icon,
+        .carousel-control-next-icon {
+            width: 2.5rem;
+            height: 2.5rem;
+            background-color: rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            backdrop-filter: blur(5px);
+        }
+
+        /* Restaurant Section */
+        #restaurantsSection {
+            opacity: 0;
+            max-height: 0;
+            overflow: hidden;
+            transition: opacity 0.5s ease, max-height 0.5s ease;
+        }
+
+        #restaurantsSection.show {
+            opacity: 1;
+            max-height: 5000px;
+        }
+
+        .section-title {
+            text-align: center;
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 2rem;
+            color: #333;
+        }
+
+        /* Filter Sidebar */
+        .filter-sidebar {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            position: sticky;
+            top: 20px;
+        }
+
+        .filter-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            color: #333;
+        }
+
+        .filter-label {
+            font-size: 0.95rem;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+            color: #666;
+        }
+
+        .filter-sidebar select {
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+            padding: 0.6rem;
+            margin-bottom: 1rem;
+        }
+
+        .filter-sidebar .btn {
+            width: 100%;
+            border-radius: 8px;
+            padding: 0.7rem;
+            font-weight: 600;
+        }
+
+        /* Restaurant Cards */
+        .restaurant-card {
+            background: white;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            transition: all 0.3s ease;
+            margin-bottom: 2rem;
+            cursor: pointer;
+        }
+
+        .restaurant-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+        }
+
+        .restaurant-image {
+            width: 100%;
+            height: 250px;
+            object-fit: cover;
+            background: #f8f9fa;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .restaurant-image img {
+            max-width: 80%;
+            max-height: 80%;
+            object-fit: contain;
+        }
+
+        .restaurant-info {
+            padding: 1.5rem;
+        }
+
+        .restaurant-name {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: #333;
+        }
+
+        .restaurant-description {
+            font-size: 0.95rem;
+            color: #666;
+            margin-bottom: 1rem;
+        }
+
+        .restaurant-rating {
+            display: inline-block;
+            background: #ffd700;
+            color: #333;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        .view-menu-btn {
+            width: 100%;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            border: none;
+            color: white;
+            padding: 0.8rem;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .view-menu-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255, 107, 53, 0.4);
+        }
+
+        /* Responsive */
+        @media (max-width: 992px) {
+            :root {
+                --navbar-height: 70px;
+            }
+
+            .navbar-brand {
+                font-size: 1.4rem;
+            }
+
+            .navbar-brand i {
+                font-size: 1.4rem;
+            }
+
+            .nav-link {
+                font-size: 0.95rem;
+                padding: 0.6rem 0.9rem !important;
+            }
+
+            .search-wrapper {
+                min-width: 200px;
+            }
+
+            .filter-sidebar {
+                margin-bottom: 2rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            :root {
+                --navbar-height: 60px;
+            }
+
+            .navbar {
+                padding: 0.5rem 0;
+            }
+
+            .navbar-brand {
+                font-size: 1.2rem;
+            }
+
+            .navbar-brand i {
+                font-size: 1.2rem;
+            }
+
+            .nav-link {
+                font-size: 0.85rem;
+            }
+            
+            .search-wrapper {
+                min-width: 100%;
+                margin-bottom: 0.5rem;
+            }
+
+            #homeCarousel .carousel-caption h5 {
+                font-size: 1.8rem;
+            }
+
+            #homeCarousel .carousel-caption p {
+                font-size: 1rem;
+            }
+
+            #homeCarousel.shrink {
+                height: calc((100vh - var(--navbar-height)) * 0.7);
+            }
+
+            .section-title {
+                font-size: 1.8rem;
+            }
+
+            .btn-cart,
+            .dropdown-toggle,
+            .btn-outline-primary,
+            .btn-danger {
+                font-size: 0.8rem;
+                padding: 0.3rem 0.9rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<!-- NAVBAR -->
+<nav class="navbar navbar-expand-lg sticky-top">
+    <div class="container">
+        <a class="navbar-brand" href="{{ url_for('home_page.home_page') }}">
+            <i class="bi bi-basket2-fill"></i> GetHere
+        </a>
+
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+                data-bs-target="#mainNavbar" aria-controls="mainNavbar"
+                aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="mainNavbar">
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0 ms-3">
+                <li class="nav-item">
+                    <a class="nav-link {% if active_page == 'home' %}active{% endif %}"
+                       aria-current="page"
+                       href="{{ url_for('home_page.home_page') }}"
+                       id="homeLink">
+                        <i class="bi bi-house-door"></i> Home
+                    </a>
+                </li>
+
+                <li class="nav-item">
+                    <a class="nav-link {% if active_page == 'restaurants' %}active{% endif %}"
+                       href="#"
+                       id="restaurantsLink">
+                        <i class="bi bi-shop"></i> Restaurants
+                    </a>
+                </li>
+            </ul>
+
+            <div class="d-flex flex-column flex-lg-row align-items-lg-center gap-2 mt-3 mt-lg-0">
+                <form class="search-wrapper position-relative" role="search" method="get">
+                    <i class="bi bi-search search-icon"></i>
+                    <input class="form-control"
+                           type="search"
+                           name="q"
+                           placeholder="Search dishes or restaurants..."
+                           aria-label="Search">
+                </form>
+
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                  
+
+                    {% if current_user is defined and current_user.is_authenticated %}
+                      <a href="#" class="btn btn-cart">
+                        <i class="bi bi-cart3"></i> Cart <span class="badge bg-danger ms-1">{{ cart_count or 0 }}</span>
+                    </a>
+                        <a href="{{ url_for('user.update_user_page',user_id = current_user.id ) }}" class="btn btn-outline-primary">
+                            <i class="bi bi-person-circle"></i> {{ current_user.username or 'Profile' }}
+                        </a>
+                        <a href="{{ url_for('user.user_logout') }}" class="btn btn-danger">
+                            <i class="bi bi-box-arrow-right"></i> Logout
+                        </a>
+                    {% else %}
+                        <!-- Login Dropdown -->
+                        <div class="btn-group">
+                            <button type="button"
+                                    class="btn btn-primary dropdown-toggle"
+                                    data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="bi bi-box-arrow-in-right"></i> Login
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li>
+                                    <a class="dropdown-item" href="{{ url_for('user.user_login') }}">
+                                        <i class="bi bi-person"></i> As User
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="{{ url_for('courier.courier_login') }}">
+                                        <i class="bi bi-bicycle"></i> As Courier
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="{{ url_for('restaurant.restaurant_login') }}">
+                                        <i class="bi bi-shop"></i> As Restaurant
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <!-- Sign Up Dropdown -->
+                        <div class="btn-group">
+                            <button type="button"
+                                    class="btn btn-primary dropdown-toggle"
+                                    data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="bi bi-person-plus"></i> Sign Up
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li>
+                                    <a class="dropdown-item" href="{{ url_for('user.user_signup') }}">
+                                        <i class="bi bi-person"></i> As User
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="{{ url_for('courier.courier_signup') }}">
+                                        <i class="bi bi-bicycle"></i> As Courier
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="{{ url_for('restaurant.restaurant_signup') }}">
+                                        <i class="bi bi-shop"></i> As Restaurant
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<!-- HERO CAROUSEL -->
+<div id="homeCarousel" class="carousel slide" data-bs-ride="carousel">
+    <div class="carousel-inner">
+        <div class="carousel-item active">
+            <img
+                src="https://images.unsplash.com/photo-1593079831268-3381b0db4a77?auto=format&fit=crop&w=1600&q=80"
+                class="d-block w-100"
+                alt="Food courier delivering an order">
+            <div class="carousel-caption d-none d-md-block">
+                <h5>Hungry? GetHere.</h5>
+                <p>Discover nearby restaurants and get your favorites delivered fast.</p>
+            </div>
+        </div>
+
+        <div class="carousel-item">
+            <img
+                src="https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1600&q=80"
+                class="d-block w-100"
+                alt="Table full of restaurant food">
+            <div class="carousel-caption d-none d-md-block">
+                <h5>From kitchen to couch.</h5>
+                <p>Fresh meals from top-rated restaurants, just a few taps away.</p>
+            </div>
+        </div>
+
+        <div class="carousel-item">
+            <img
+                src="https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=1600&q=80"
+                class="d-block w-100"
+                alt="Top view of different dishes">
+            <div class="carousel-caption d-none d-md-block">
+                <h5>Food for every mood.</h5>
+                <p>Burgers, salads, desserts and more – all in one app.</p>
+            </div>
+        </div>
+    </div>
+
+    <button class="carousel-control-prev" type="button"
+            data-bs-target="#homeCarousel" data-bs-slide="prev">
+        <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+        <span class="visually-hidden">Previous</span>
+    </button>
+
+    <button class="carousel-control-next" type="button"
+            data-bs-target="#homeCarousel" data-bs-slide="next">
+        <span class="carousel-control-next-icon" aria-hidden="true"></span>
+        <span class="visually-hidden">Next</span>
+    </button>
+</div>
+
+<!-- RESTAURANTS SECTION -->
+<div id="restaurantsSection" class="container-fluid px-5 py-4">
+    <h2 class="section-title">All Restaurants</h2>
+    
+    <div class="row">
+        <div class="col-lg-3 col-md-4">
+            <div class="filter-sidebar">
+                <h3 class="filter-title">Sort & Filter</h3>
+                
+                <div class="mb-3">
+                    <label class="filter-label">Sort by</label>
+                    <select class="form-select" id="sortBy">
+                        <option value="default">Default</option>
+                        <option value="rating">Rating</option>
+                        <option value="delivery">Delivery Time</option>
+                        <option value="popular">Most Popular</option>
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label class="filter-label">Min rating</label>
+                    <select class="form-select" id="minRating">
+                        <option value="any">Any</option>
+                        <option value="3">3+ Stars</option>
+                        <option value="4">4+ Stars</option>
+                        <option value="4.5">4.5+ Stars</option>
+                    </select>
+                </div>
+
+                <button class="btn btn-primary" id="applyFilter">
+                    Apply
+                </button>
+            </div>
+        </div>
+
+        <div class="col-lg-9 col-md-8">
+            <div class="row" id="restaurantGrid">
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container-fluid px-5">
+    {% block content %}{% endblock %}
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        fetchRestaurants();
+    });
+
+    function fetchRestaurants() {
+        fetch('/restaurant/api/restaurants')
+            .then(response => response.json())
+            .then(data => {
+                renderRestaurants(data);
+            })
+            .catch(error => {
+                console.error('Error fetching restaurants:', error);
+                const grid = document.getElementById('restaurantGrid');
+                grid.innerHTML = '<p class="text-danger">Failed to load restaurants. Please try again later.</p>';
+            });
+    }
+
+    function renderRestaurants(restaurants) {
+        const grid = document.getElementById('restaurantGrid');
+        grid.innerHTML = '';
+
+        restaurants.forEach(restaurant => {
+            const col = document.createElement('div');
+            col.className = 'col-lg-4 col-md-6';
+            
+            col.innerHTML = `
+                <div class="restaurant-card" onclick="viewRestaurant(${restaurant.r_id})">
+                    <div class="restaurant-image">
+                        <img src="https://markantalya.com/wp-content/uploads/2023/02/burgerking.jpg" alt="${restaurant.name}">
+                    </div>
+                    <div class="restaurant-info">
+                        <h3 class="restaurant-name">${restaurant.name}</h3>
+                        <p class="restaurant-description">${restaurant.cuisine} - ${restaurant.city}</p>
+                        <span class="restaurant-rating">
+                            <i class="bi bi-star-fill"></i> ${restaurant.rating || 'N/A'}
+                        </span>
+                        <button class="view-menu-btn" onclick="event.stopPropagation(); viewMenu(${restaurant.r_id})">
+                            View menu
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            grid.appendChild(col);
+        });
+    }
+
+    function viewRestaurant(id) {
+        console.log('Viewing restaurant:', id);
+        // Redirect to restaurant detail page or menu page
+        window.location.href = `/restaurant/${id}`;
+    }
+
+    function viewMenu(id) {
+        console.log('Viewing menu for restaurant:', id);
+        // Redirect to restaurant menu page
+        window.location.href = `/restaurant/${id}/menu`; // Assuming a menu route like this
+    }
+
+    document.getElementById('restaurantsLink').addEventListener('click', function(e) {
+        e.preventDefault();
+        
+        const carousel = document.getElementById('homeCarousel');
+        const restaurantsSection = document.getElementById('restaurantsSection');
+        
+        carousel.classList.add('shrink');
+        
+        setTimeout(() => {
+            restaurantsSection.classList.add('show');
+            fetchRestaurants(); // Fetch and render when section is shown
+        }, 300);
+
+        document.getElementById('homeLink').classList.remove('active');
+        this.classList.add('active');
+
+        setTimeout(() => {
+            restaurantsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 400);
+    });
+
+    document.getElementById('homeLink').addEventListener('click', function(e) {
+        e.preventDefault();
+        
+        const carousel = document.getElementById('homeCarousel');
+        const restaurantsSection = document.getElementById('restaurantsSection');
+        
+        restaurantsSection.classList.remove('show');
+        
+        setTimeout(() => {
+            carousel.classList.remove('shrink');
+        }, 300);
+
+        document.getElementById('restaurantsLink').classList.remove('active');
+        this.classList.add('active');
+
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+
+    document.getElementById('applyFilter').addEventListener('click', function() {
+        // Implement filtering logic here if needed, possibly by calling a filtered API endpoint
+        // For now, just re-fetch all restaurants
+        fetchRestaurants();
+    });
+</script>
+
+</body>
+</html>

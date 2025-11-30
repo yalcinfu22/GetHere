@@ -1,0 +1,88 @@
+{% extends "main_page.html" %}
+{% block content %}
+<h1 class="h3 mb-4 text-center">All Restaurants</h1>
+
+<div class="row gx-4">
+  <!-- LEFT: Sort / Filter sidebar -->
+  <aside class="col-12 col-md-3 col-lg-2 mb-4">
+    <div class="card shadow-sm">
+      <div class="card-header">
+        <strong>Sort & Filter</strong>
+      </div>
+      <div class="card-body">
+        <form method="get">
+          <!-- Sort by -->
+          <div class="mb-3">
+            <label for="sortSelect" class="form-label mb-1">Sort by</label>
+            <select id="sortSelect" name="sort" class="form-select form-select-sm">
+              <option value="">Default</option>
+              <option value="price_asc" {% if sort=='price_asc' %}selected{% endif %}>Price: Low → High</option>
+              <option value="price_desc" {% if sort=='price_desc' %}selected{% endif %}>Price: High → Low</option>
+              <option value="rating_desc" {% if sort=='rating_desc' %}selected{% endif %}>Rating: High → Low</option>
+              <option value="rating_asc" {% if sort=='rating_asc' %}selected{% endif %}>Rating: Low → High</option>
+            </select>
+          </div>
+
+          <!-- Example filter: minimum rating -->
+          <div class="mb-3">
+            <label for="minRating" class="form-label mb-1">Min rating</label>
+            <select id="minRating" name="min_rating" class="form-select form-select-sm">
+              <option value="">Any</option>
+              <option value="3" {% if min_rating=='3' %}selected{% endif %}>3★ and up</option>
+              <option value="4" {% if min_rating=='4' %}selected{% endif %}>4★ and up</option>
+              <option value="4.5" {% if min_rating=='4.5' %}selected{% endif %}>4.5★ and up</option>
+            </select>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-sm w-100">
+            Apply
+          </button>
+        </form>
+      </div>
+    </div>
+  </aside>
+
+  <!-- RIGHT: Restaurant cards -->
+  <div class="col-12 col-md-9 col-lg-10">
+    <div id="restaurant-list" class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+      <!-- Restaurant cards will be inserted here by JavaScript -->
+    </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    fetch('/restaurant/api/restaurants')
+      .then(response => response.json())
+      .then(data => {
+        const restaurantList = document.getElementById('restaurant-list');
+        restaurantList.innerHTML = ''; // Clear existing cards
+        data.forEach(restaurant => {
+          const card = `
+                    <div class="col d-flex justify-content-center">
+                      <div class="card h-100 shadow-sm" style="width: 90%;">
+                        <img src="https://markantalya.com/wp-content/uploads/2023/02/burgerking.jpg"
+                             class="card-img-top" alt="${restaurant.name}">
+                        <div class="card-body">
+                          <h5 class="card-title">${restaurant.name}</h5>
+                          <p class="card-text small text-muted">
+                            ${restaurant.cuisine} - ${restaurant.city}
+                          </p>
+                        </div>
+                        <div class="card-footer bg-transparent border-0">
+                          <button class="view-menu-btn" onclick="event.stopPropagation(); window.location.href='/restaurant/${restaurant.r_id}/menu'">View menu</button>
+                        </div>
+                      </div>
+                    </div>
+                `;
+          restaurantList.innerHTML += card;
+        });
+      })
+      .catch(error => {
+        console.error('Error fetching restaurants:', error);
+        const restaurantList = document.getElementById('restaurant-list');
+        restaurantList.innerHTML = '<p class="text-danger">Failed to load restaurants. Please try again later.</p>';
+      });
+  });
+</script>
+{% endblock %}
