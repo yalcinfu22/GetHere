@@ -94,6 +94,23 @@
       font-weight: 500;
     }
 
+    .view-menu-btn {
+      width: 100%;
+      background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+      border: none;
+      color: white;
+      padding: 0.8rem;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 1rem;
+      transition: all 0.3s ease;
+    }
+
+    .view-menu-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(255, 107, 53, 0.4);
+    }
+
     /* Page Specific Styles */
     .hover-shadow:hover {
       transform: translateY(-5px);
@@ -186,11 +203,11 @@
   <!-- CONTENT -->
   <div class="container py-4">
     <!-- Header Section -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
       <div class="d-flex justify-content-between align-items-center mb-4">
       <div>
         <h1 class="h2 mb-1">Restaurant Orders</h1>
         <p class="text-muted">List of orders made to your restaurant</p>
+      </div>
       </div>
       <div class="row gx-4">
   <!-- LEFT: Sort / Filter sidebar -->
@@ -204,28 +221,24 @@
           <!-- Sort by -->
           <div class="mb-3">
             <label for="sortSelect" class="form-label mb-1">Sort by</label>
-            <select id="sortSelect" name="sort" class="form-select form-select-sm">
+            <select id="sortSelect" name="sort" class="form-select form-select-sm" onchange="loadOrders()">
               <option value="">Default</option>
-              <option value="order_date_asc" {% if sort=='date_asc' %}selected{% endif %}>Oldest</option>
-              <option value="order_date_desc" {% if sort=='date_desc' %}selected{% endif %}>Newest</option>
-              <option value="sales_qty_desc" {% if sort=='qty_desc' %}selected{% endif %}>Highest Quantities</option>
-              <option value="sales_qty_asc" {% if sort=='qty_asc' %}selected{% endif %}>Lowest Quantities</option>
+              <option value="order_date|asc" {% if sort=='date_asc' %}selected{% endif %}>Oldest</option>
+              <option value="order_date|desc" {% if sort=='date_desc' %}selected{% endif %}>Newest</option>
+              <option value="sales_qty|desc" {% if sort=='qty_desc' %}selected{% endif %}>Highest Quantities</option>
+              <option value="sales_qty|asc" {% if sort=='qty_asc' %}selected{% endif %}>Lowest Quantities</option>
             </select>
           </div>
 
           <!-- Example filter: minimum rating -->
           <div class="mb-3">
             <label for="IsDelivered" class="form-label mb-1">Is Delivered</label>
-            <select id="IsDelivered" name="IsDelivered" class="form-select form-select-sm">
+            <select id="IsDelivered" name="IsDelivered" class="form-select form-select-sm" onchange="loadOrders()">
               <option value="">Any</option>
               <option value="0" {% if IsDelivered=='0' %}selected{% endif %}>Not Delivered</option>
               <option value="1" {% if IsDelivered=='1' %}selected{% endif %}>Delivered</option>
             </select>
           </div>
-
-          <button type="submit" class="btn btn-primary btn-sm w-100">
-            Apply
-          </button>
         </form>
       </div>
     </div>
@@ -239,8 +252,6 @@
   </div>
 </div>
   </div>
-    </div>
-  </div>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
@@ -249,10 +260,26 @@
     const isManager = JSON.parse('{{ is_manager | tojson }}');
 
     async function loadOrders() {
+      const sort = document.getElementById("sortSelect").value;
+      const delivered = document.getElementById("IsDelivered").value;
+
+      let order_by = "order_date";
+      let order = "asc";
+
+      if (sort.includes("|")) {
+        [order_by, order] = sort.split("|");
+      }
+
+      let url = `/orders/search?r_id=${rId}&order_by=${order_by}&order=${order}&limit=100`;
+
+      if (delivered !== "") {
+        url += `&IsDelivered=${delivered}`;
+      }
+
+
       try {
-        const res = await fetch(`/orders/search?r_id=${rId}&order_by=order_date&order=asc&limit=100`);
+        const res = await fetch(url);
         let data = await res.json();
-        console.log(data);
 
         if (!Array.isArray(data)) {
             data = data.orders || [];
@@ -266,11 +293,13 @@
         }
 
         data.forEach(order => {
+          const imgSrc = order.IsDelivered == 1
+              ? "https://cdn-icons-png.flaticon.com/512/190/190411.png"   // delivered
+              : "https://cdn-icons-png.flaticon.com/512/6711/6711656.png"; // not delivered
           const card = `
                     <div class="col d-flex justify-content-center">
-                      <div class="card h-100 shadow-sm" style="width: 90%;">
-                        <img src="https://markantalya.com/wp-content/uploads/2023/02/burgerking.jpg"
-                             class="card-img-top" alt="${order.order_date}">
+                      <div class="card h-100 shadow-sm border-0 hover-shadow transition-all" style="width: 90%;">
+                        <img src="${imgSrc}" class="card-img-top" alt="status" style="width: 100px; margin: 30px auto;">
                         <div class="card-body">
                           <h5 class="card-title">${order.order_date}</h5>
                           <p class="card-text small text-muted">
@@ -278,7 +307,7 @@
                           </p>
                         </div>
                         <div class="card-footer bg-transparent border-0">
-                          <button class="view-menu-btn" onclick="event.stopPropagation(); window.location.href='/restaurant/${order.r_id}/menu'">View menu</button>
+                          <button class="view-menu-btn" onclick="event.stopPropagation(); window.location.href='/restaurant/${order.r_id}/${order.o_id}'">View Order</button>
                         </div>
                       </div>
                     </div>

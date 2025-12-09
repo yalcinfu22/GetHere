@@ -276,6 +276,23 @@ def restaurant_orders(r_id):
         is_manager=is_manager
     )
 
+@restaurant.route('/<int:r_id>/<int:o_id>')
+def restaurant_order_details(r_id, o_id):
+    """Restaurant orders page"""
+    # DEMO MODE: Always admin
+    is_manager = True
+    # is_manager = (
+    #     session.get('user_type') == 'restaurant' and
+    #     str(session.get('user_id')) == str(r_id)
+    # )
+
+    return render_template(
+        'order_detail.html',
+        r_id=r_id,
+        o_id=o_id,
+        is_manager=is_manager
+    )
+
 @restaurant.route('/api/restaurants', methods=['GET'])
 def list_restaurants():
     db = db_helper.get_db_connection()
