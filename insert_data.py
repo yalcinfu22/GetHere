@@ -18,7 +18,7 @@ BATCH_SIZE = 2000
 db_config = {
     'host': 'localhost',
     'user': 'root',
-    'password': '227maram', # <-- ŞİFRENİ YAZ
+    'password': os.getenv("DB_PASSWORD"), # <-- ŞİFRENİ YAZ
     'database': 'term_project',
     'ssl_disabled': True,
     'allow_local_infile': True
