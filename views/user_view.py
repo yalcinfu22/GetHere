@@ -115,7 +115,7 @@ def user_submit_signup_form():
         db.close()
 
     return redirect(url_for("home_page.home_page"))
-@user.route('/<int:user_id>')
+@user.route('/user_id=<int:user_id>')
 def user_home(user_id):
     user_id_stored = session.get('user_id') # the user id stored in the session
     user_name = session.get('user_name')
@@ -130,7 +130,7 @@ def user_home(user_id):
         return render_template("home_page.html", active_page="home", cart_count=0, current_user = current_user) # to do  update cart count
     else :
         return redirect(url_for("home_page.home_page"))
-@user.route('profile/<int:user_id>')
+@user.route('profile/user_id=<int:user_id>')
 def update_user_page(user_id):
     user_id_stored = session.get('user_id') # the user id stored in the session
     user_name = session.get('user_name')
@@ -160,7 +160,7 @@ def update_user_page(user_id):
          # to do  update cart count
     else :
         return redirect(url_for("home_page.home_page"))
-@user.route('update/<int:user_id>',  methods=['POST'])
+@user.route('update/user_id=<int:user_id>',  methods=['POST'])
 def update_user(user_id):
         user_id_stored = session.get('user_id') # the user id stored in the session
         user_type = session.get('user_type')
@@ -218,7 +218,7 @@ def update_user(user_id):
             return redirect(url_for("user.update_user_page", user_id = user_id))
         else: 
             return redirect(url_for("home_page.home_page"))
-@user.route('delete/<int:user_id>',  methods=['POST'])
+@user.route('delete/user_id=<int:user_id>',  methods=['POST'])
 def delete(user_id):
     user_id_stored = session.get('user_id')
     user_type = session.get('user_type')

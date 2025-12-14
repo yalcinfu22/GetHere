@@ -164,4 +164,12 @@ CREATE TABLE Task (
     FOREIGN KEY (m_id) REFERENCES Menu(m_id) ON DELETE SET NULL,
     UNIQUE KEY unique_order (o_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE Cart (
+    user_id INT NOT NULL,
+    o_id INT NOT NULL,
+    quantity INT,
+    PRIMARY KEY (user_id, o_id),
+    FOREIGN KEY (user_id) REFERENCES User(user_id) ON DELETE CASCADE,
+    FOREIGN KEY (o_id) REFERENCES Orders(o_id) ON DELETE CASCADE,
+)
 
