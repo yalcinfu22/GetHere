@@ -166,10 +166,10 @@ CREATE TABLE Task (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 CREATE TABLE Cart (
     user_id INT NOT NULL,
-    o_id INT NOT NULL,
+    m_id INT NOT NULL,
     quantity INT,
-    PRIMARY KEY (user_id, o_id),
+    PRIMARY KEY (user_id, m_id),
     FOREIGN KEY (user_id) REFERENCES User(user_id) ON DELETE CASCADE,
-    FOREIGN KEY (o_id) REFERENCES Orders(o_id) ON DELETE CASCADE,
+    FOREIGN KEY (m_id) REFERENCES Orders(m_id) ON DELETE CASCADE,
 )
 
