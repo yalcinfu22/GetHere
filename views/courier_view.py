@@ -26,7 +26,7 @@ def courier_submit_login():
     
     # Database lookup
     db = db_helper.get_db_connection()
-    cursor = db.cursor(dictionary=True)
+    cursor = db.cursor(dictionary=True, buffered=True)  # Added buffered=True
     
     try:
         cursor.execute("SELECT * FROM Courier WHERE email = %s", (email,))
@@ -63,7 +63,7 @@ def courier_dashboard():
     
     courier_id = session['user_id']
     db = db_helper.get_db_connection()
-    cursor = db.cursor(dictionary=True)
+    cursor = db.cursor(dictionary=True, buffered=True)
     
     try:
         cursor.execute("""
@@ -134,10 +134,209 @@ def profile_page():
 def active_tasks_page():
     return "Detailed Active Tasks Page (To Be Implemented)"
 
+
+@courier.route('/tasks/complete/<int:task_id>', methods=['POST'])
+def complete_task(task_id):
+    """
+    Complete a delivery task.
+    This will:
+    1. Set task status to 1 (completed)
+    2. Increment deliveries_made in Positions table
+    3. Increment taskCount in Courier table
+    """
+    if 'user_id' not in session or session.get('user_type') != 'courier':
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    courier_id = session['user_id']
+    db = db_helper.get_db_connection()
+    cursor = db.cursor(dictionary=True, buffered=True)
+    
+    try:
+        # Verify task belongs to this courier and is not completed
+        cursor.execute("""
+            SELECT t.t_id, t.c_id, t.status, c.r_id
+            FROM Task t
+            JOIN Courier c ON t.c_id = c.c_id
+            WHERE t.t_id = %s AND t.c_id = %s
+        """, (task_id, courier_id))
+        task = cursor.fetchone()
+        
+        if not task:
+            return jsonify({"error": "Task not found or does not belong to you"}), 404
+        
+        if task['status'] == 1:
+            return jsonify({"error": "Task is already completed"}), 400
+        
+        # 1. Mark task as completed
+        cursor.execute("""
+            UPDATE Task SET status = 1 WHERE t_id = %s
+        """, (task_id,))
+        
+        # 2. Increment deliveries_made in Positions (if courier has a position)
+        if task['r_id']:
+            cursor.execute("""
+                UPDATE Positions 
+                SET deliveries_made = deliveries_made + 1 
+                WHERE c_id = %s AND r_id = %s
+            """, (courier_id, task['r_id']))
+        
+        # 3. Increment taskCount in Courier table
+        cursor.execute("""
+            UPDATE Courier 
+            SET taskCount = taskCount + 1 
+            WHERE c_id = %s
+        """, (courier_id,))
+        
+        db.commit()
+        
+        return jsonify({
+            "success": True,
+            "message": "Delivery completed successfully!"
+        })
+
+    except Exception as e:
+        db.rollback()
+        print(f"Complete task error: {e}")
+        return jsonify({"error": str(e)}), 500
+    finally:
+        cursor.close()
+        db.close()
+
 @courier.route('/restaurant/my')
 def my_restaurant_page():
-    # Logic: Check if user has r_id, if not show error, else show details
-    return "My Restaurant Details (To Be Implemented)"
+    """
+    My Restaurant page - Shows details of the restaurant where courier works.
+    Includes option to leave the position.
+    """
+    if 'user_id' not in session or session.get('user_type') != 'courier':
+        return redirect(url_for('courier.courier_login'))
+    
+    courier_id = session['user_id']
+    db = db_helper.get_db_connection()
+    cursor = db.cursor(dictionary=True, buffered=True)
+    
+    try:
+        # Get courier info with restaurant
+        cursor.execute("""
+            SELECT c.c_id, c.name, c.surname, c.r_id, c.rating, c.experience, c.taskCount
+            FROM Courier c
+            WHERE c.c_id = %s
+        """, (courier_id,))
+        courier_info = cursor.fetchone()
+        
+        # Check if courier has a restaurant
+        if not courier_info or not courier_info['r_id']:
+            return render_template('my_restaurant.html', 
+                                 courier=courier_info, 
+                                 restaurant=None, 
+                                 position=None)
+        
+        # Get restaurant details
+        cursor.execute("""
+            SELECT r.r_id, r.name, r.city, r.rating, r.rating_count, 
+                   r.cuisine, r.address, r.link, r.cost, r.lic_no
+            FROM Restaurant r
+            WHERE r.r_id = %s
+        """, (courier_info['r_id'],))
+        restaurant = cursor.fetchone()
+        
+        # Get position details (payment info)
+        cursor.execute("""
+            SELECT p.p_id, p.payment, p.deliveries_made, p.created_at
+            FROM Positions p
+            WHERE p.c_id = %s AND p.r_id = %s
+        """, (courier_id, courier_info['r_id']))
+        position = cursor.fetchone()
+        
+        # Convert Decimal to float for template
+        if restaurant and restaurant['rating']:
+            restaurant['rating'] = float(restaurant['rating'])
+        if position:
+            if position['payment']:
+                position['payment'] = float(position['payment'])
+            if position['deliveries_made'] is None:
+                position['deliveries_made'] = 0
+        
+        return render_template('my_restaurant.html',
+                             courier=courier_info,
+                             restaurant=restaurant,
+                             position=position)
+
+    except Exception as e:
+        print(f"My Restaurant page error: {e}")
+        return f"Error: {e}", 500
+    finally:
+        cursor.close()
+        db.close()
+
+
+@courier.route('/restaurant/leave', methods=['POST'])
+def leave_restaurant():
+    """
+    Leave current restaurant position.
+    This will:
+    1. Set courier's r_id to NULL
+    2. Delete the position from Positions table
+    """
+    if 'user_id' not in session or session.get('user_type') != 'courier':
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    courier_id = session['user_id']
+    db = db_helper.get_db_connection()
+    cursor = db.cursor(dictionary=True, buffered=True)
+    
+    try:
+        # Get current courier info
+        cursor.execute("""
+            SELECT c_id, r_id, name, surname
+            FROM Courier 
+            WHERE c_id = %s
+        """, (courier_id,))
+        courier_info = cursor.fetchone()
+        
+        if not courier_info:
+            return jsonify({"error": "Courier not found"}), 404
+        
+        if not courier_info['r_id']:
+            return jsonify({"error": "You are not currently employed at any restaurant"}), 400
+        
+        restaurant_id = courier_info['r_id']
+        
+        # Get restaurant name for confirmation message
+        cursor.execute("SELECT name FROM Restaurant WHERE r_id = %s", (restaurant_id,))
+        restaurant = cursor.fetchone()
+        restaurant_name = restaurant['name'] if restaurant else "Unknown"
+        
+        # Delete the position (this removes the job listing)
+        cursor.execute("""
+            DELETE FROM Positions 
+            WHERE c_id = %s AND r_id = %s
+        """, (courier_id, restaurant_id))
+        
+        # Update courier's r_id to NULL
+        cursor.execute("""
+            UPDATE Courier 
+            SET r_id = NULL 
+            WHERE c_id = %s
+        """, (courier_id,))
+        
+        db.commit()
+        
+        # Update session
+        session['courier_r_id'] = None
+        
+        return jsonify({
+            "success": True,
+            "message": f"You have successfully left {restaurant_name}. You can now apply to new positions."
+        })
+
+    except Exception as e:
+        db.rollback()
+        print(f"Leave restaurant error: {e}")
+        return jsonify({"error": str(e)}), 500
+    finally:
+        cursor.close()
+        db.close()
 
 
 # ==========================================
@@ -148,7 +347,7 @@ def my_restaurant_page():
 def debug_positions():
     """Debug endpoint to check positions in database."""
     db = db_helper.get_db_connection()
-    cursor = db.cursor(dictionary=True)
+    cursor = db.cursor(dictionary=True, buffered=True)
     
     try:
         # Count positions
@@ -196,7 +395,7 @@ def search_positions_page():
     
     courier_id = session['user_id']
     db = db_helper.get_db_connection()
-    cursor = db.cursor(dictionary=True)
+    cursor = db.cursor(dictionary=True, buffered=True)
     
     try:
         # Get current courier info for eligibility checking
@@ -255,7 +454,7 @@ def api_search_positions():
     print(f"[DEBUG] Search params: min_payment={min_payment}, restaurant_id={restaurant_id}, city={city}, eligible_only={eligible_only}, sort_by={sort_by}")
     
     db = db_helper.get_db_connection()
-    cursor = db.cursor(dictionary=True)
+    cursor = db.cursor(dictionary=True, buffered=True)
     
     try:
         # Get courier info for eligibility
@@ -367,7 +566,7 @@ def api_top_positions():
     print(f"[DEBUG TOP] Fetching top positions for courier_id={courier_id}")
     
     db = db_helper.get_db_connection()
-    cursor = db.cursor(dictionary=True)
+    cursor = db.cursor(dictionary=True, buffered=True)
     
     try:
         # Get courier info
@@ -436,7 +635,7 @@ def api_apply_position(position_id):
     courier_id = session['user_id']
     
     db = db_helper.get_db_connection()
-    cursor = db.cursor(dictionary=True)
+    cursor = db.cursor(dictionary=True, buffered=True)
     
     try:
         # 1. Get courier info
@@ -558,7 +757,7 @@ def create_position():
     req_rating = data.get('req_rating', 0)
     
     db = db_helper.get_db_connection()
-    cursor = db.cursor(dictionary=True)
+    cursor = db.cursor(dictionary=True, buffered=True)
     
     try:
         # Verify restaurant exists
@@ -674,7 +873,7 @@ def get_all_couriers():
     if not db:
         return jsonify({"error": "Database connection failed"}), 500
     
-    mycursor = db.cursor(dictionary=True) 
+    mycursor = db.cursor(dictionary=True, buffered=True) 
     try:
         mycursor.execute("SELECT * FROM Courier")
         couriers = mycursor.fetchall()
@@ -692,7 +891,7 @@ def get_courier(courier_id):
     if not db:
         return jsonify({"error": "Database connection failed"}), 500
         
-    mycursor = db.cursor(dictionary=True)
+    mycursor = db.cursor(dictionary=True, buffered=True)
     try:
         query = "SELECT * FROM Courier WHERE c_id = %s"
         mycursor.execute(query, (courier_id,))
