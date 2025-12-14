@@ -5,16 +5,14 @@ USE term_project;
 -- 1. User Table (UPDATED: AUTO_INCREMENT)
 CREATE TABLE User (
     user_id INT PRIMARY KEY AUTO_INCREMENT, -- CSV ID'leri aynen kalır, yeniler otomatik artar
-    name VARCHAR(100),
-    email VARCHAR(100),
-    password VARCHAR(255),
+    name VARCHAR(100) NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL,
     Age INT,
     Gender VARCHAR(20) NOT NULL DEFAULT 'Unknown',
     Marital_Status VARCHAR(50) NOT NULL DEFAULT 'Single',
     Occupation VARCHAR(100),
     Monthly_Income VARCHAR(50),
-    Educational_Qualifications VARCHAR(100),
-    Family_size INT,
     city VARCHAR(50) DEFAULT 'Istanbul',
     address TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -98,14 +96,16 @@ CREATE TABLE Orders (
     user_id INT NOT NULL,
     r_id INT NOT NULL,
     order_date DATETIME,
-    sales_qty INT DEFAULT 1,
-    sales_amount DECIMAL(10,2) NOT NULL DEFAULT 0.0,
+    sales_qty INT DEFAULT 1 CHECK (sales_qty >= 1),
+    sales_amount DECIMAL(10,2) NOT NULL DEFAULT 0.0 CHECK (sales_amount >= 0),
     currency VARCHAR(10) DEFAULT 'USD',
-    m_id INT NOT NULL,
+    m_id INT,
     c_id INT NOT NULL,
-    IsDelivered BOOLEAN DEFAULT TRUE,
-    
+    IsDelivered BOOLEAN DEFAULT FALSE,
+    menu_rate DECIMAL(1,1) DEFAULT NULL CHECK (menu_rate >= 0.0 AND menu_rate <= 5.0),
+    courier_rate DECIMAL(1,1) DEFAULT NULL CHECK (courier_rate >= 0.0 AND courier_rate <= 5.0),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
     FOREIGN KEY (user_id) REFERENCES User(user_id) ON DELETE CASCADE,
     FOREIGN KEY (r_id) REFERENCES Restaurant(r_id) ON DELETE CASCADE,
     FOREIGN KEY (c_id) REFERENCES Courier(c_id) ON DELETE RESTRICT,
@@ -140,6 +140,7 @@ CREATE TABLE Positions (
     payment DECIMAL(10,2) NOT NULL,
     isOpen BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    deliveries_made INT DEFAULT 0,
     FOREIGN KEY (c_id) REFERENCES Courier(c_id) ON DELETE SET NULL,
     FOREIGN KEY (r_id) REFERENCES Restaurant(r_id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -164,3 +165,12 @@ CREATE TABLE Task (
     FOREIGN KEY (m_id) REFERENCES Menu(m_id) ON DELETE SET NULL,
     UNIQUE KEY unique_order (o_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE Cart (
+    user_id INT NOT NULL,
+    m_id INT NOT NULL,
+    quantity INT,
+    PRIMARY KEY (user_id, m_id),
+    FOREIGN KEY (user_id) REFERENCES User(user_id) ON DELETE CASCADE,
+    FOREIGN KEY (m_id) REFERENCES Menu(m_id) ON DELETE CASCADE
+)
+

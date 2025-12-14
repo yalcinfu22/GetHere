@@ -197,9 +197,55 @@
       </button>
     </div>
 
-    <!-- Menu Grid -->
-    <div id="menu-cards" class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
-      <!-- Menu items will be injected here -->
+    <div class="row">
+      <div class="col-lg-9">
+        <div id="menu-cards" class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+          <!-- Menu items injected here -->
+        </div>
+      </div>
+
+      <!-- Opportunities Sidebar (Manager Only) -->
+      <div class="col-lg-3" id="opp-col" style="display:none;">
+        <div class="card shadow-sm border-0 sticky-top" style="top: 80px; z-index: 1;">
+          <div class="card-header bg-white fw-bold text-success">
+            <i class="bi bi-lightbulb"></i> Recommended to Add
+          </div>
+          <div class="card-list list-group list-group-flush" id="opp-list">
+            <!-- Opportunities injected here -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  </div>
+
+  <!-- Add Menu Modal -->
+  <div class="modal fade" id="addMenuModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Add Menu Item</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label>Search Global Food Catalog</label>
+            <input type="text" id="foodSearch" class="form-control" placeholder="Type generic name e.g. Burger...">
+          </div>
+          <div id="searchResults" class="list-group mb-3" style="max-height: 200px; overflow-y:auto;"></div>
+
+          <hr>
+          <div id="selectedFoodArea" style="display:none;">
+            <p class="fw-bold">Selected: <span id="selName" class="text-primary"></span></p>
+            <input type="hidden" id="selFid">
+            <input type="hidden" id="selVeg">
+            <label>Set Your Price (₺)</label>
+            <input type="number" id="selPrice" class="form-control mb-2" placeholder="0.00">
+            <button onclick="submitMenuItem()" class="btn btn-success w-100">Add to Menu</button>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -208,6 +254,7 @@
   <script>
     const rId = JSON.parse('{{ r_id | tojson }}');
     const isManager = JSON.parse('{{ is_manager | tojson }}');
+    const isCustomer = JSON.parse('{{ is_customer | tojson }}');
 
     async function loadMenus() {
       try {
@@ -222,17 +269,28 @@
         }
 
         data.forEach(m => {
-          const actions = isManager ? `
-          <div class="card-footer bg-transparent border-0 pt-0 pb-3">
-            <div class="d-flex gap-2">
-                <button class="btn btn-sm btn-outline-secondary flex-grow-1" onclick="editMenu(${m.m_id}, ${m.price})">
-                    <i class="bi bi-pencil me-1"></i>Update
+          let actions = '';
+
+          if (isManager) {
+            actions = `
+            <div class="card-footer bg-transparent border-0 pt-0 pb-3">
+              <div class="d-flex gap-2">
+                  <button class="btn btn-sm btn-outline-secondary flex-grow-1" onclick="editMenu(${m.m_id}, ${m.price})">
+                      <i class="bi bi-pencil me-1"></i>Update
+                  </button>
+                  <button class="btn btn-sm btn-outline-danger flex-grow-1" onclick="delMenu(${m.m_id})">
+                      <i class="bi bi-trash me-1"></i>Delete
+                  </button>
+              </div>
+            </div>`;
+          } else if (isCustomer) {
+            actions = `
+            <div class="card-footer bg-transparent border-0 pt-0 pb-3">
+                <button class="btn btn-sm btn-primary w-100" onclick="addToCart(${m.m_id}, '${m.food_name || ''}', ${m.price})">
+                    <i class="bi bi-cart-plus me-1"></i>Add to Cart
                 </button>
-                <button class="btn btn-sm btn-outline-danger flex-grow-1" onclick="delMenu(${m.m_id})">
-                    <i class="bi bi-trash me-1"></i>Delete
-                </button>
-            </div>
-          </div>` : '';
+            </div>`;
+          }
 
           const card = `
           <div class="col">
@@ -282,27 +340,115 @@
       if (res.ok) loadMenus();
     }
 
-    document.getElementById('btnAdd').onclick = async () => {
-      const foodName = prompt('Food name:');
-      if (!foodName) return;
-      const price = parseFloat(prompt('Price:') || '0');
-      const veg = prompt('Veg/Non-Veg/Other (optional):') || null;
-      const cuisine = prompt('Cuisine (optional):') || null;
+    async function addToCart(mId, foodName, price) {
+      // TODO: Implement actual cart adding logic
+      // The user mentioned they will make the table, so we just provide the button hook here.
+      alert(`Added ${foodName} to cart!`);
+    }
 
+    async function loadOpportunities() {
+      if (!isManager) return;
+      document.getElementById('opp-col').style.display = 'block';
+
+      const res = await fetch(`/restaurant/api/${rId}/opportunities`);
+      const data = await res.json();
+      const list = document.getElementById('opp-list');
+      list.innerHTML = '';
+
+      if (data.length === 0) {
+        list.innerHTML = '<div class="p-3 text-muted small">Your menu is perfect! No suggestions.</div>';
+        return;
+      }
+
+      data.forEach(item => {
+        const el = document.createElement('div');
+        el.className = 'list-group-item d-flex justify-content-between align-items-center action-hover';
+        el.innerHTML = `
+                <div>
+                    <div class="fw-bold small">${item.item}</div>
+                    <div class="text-muted small" style="font-size:0.75rem">${item.veg_or_non_veg}</div>
+                </div>
+                <button class="btn btn-sm btn-outline-success rounded-circle" onclick="quickAdd('${item.f_id}', '${item.item}', '${item.veg_or_non_veg}')">
+                    <i class="bi bi-plus"></i>
+                </button>
+            `;
+        list.appendChild(el);
+      });
+    }
+
+    // Quick add from sidebar
+    window.quickAdd = function (fid, name, veg) {
+      // Pre-fill modal
+      const modal = new bootstrap.Modal(document.getElementById('addMenuModal'));
+      modal.show();
+      selectFood(fid, name, veg);
+    };
+
+    // Modal Search Logic
+    const searchInput = document.getElementById('foodSearch');
+    let searchTimeout;
+
+    searchInput.addEventListener('input', (e) => {
+      const val = e.target.value;
+      clearTimeout(searchTimeout);
+      searchTimeout = setTimeout(async () => {
+        if (val.length < 2) return;
+        const res = await fetch(`/food/?q=${val}`);
+        const data = await res.json();
+        const resDiv = document.getElementById('searchResults');
+        resDiv.innerHTML = '';
+
+        data.forEach(f => {
+          const a = document.createElement('a');
+          a.className = 'list-group-item list-group-item-action';
+          a.innerHTML = `${f.item} <small class="text-muted">(${f.veg_or_non_veg})</small>`;
+          a.onclick = () => selectFood(f.sample_id, f.item, f.veg_or_non_veg);
+          resDiv.appendChild(a);
+        });
+      }, 300);
+    });
+
+    function selectFood(fid, name, veg) {
+      document.getElementById('selFid').value = fid;
+      document.getElementById('selVeg').value = veg;
+      document.getElementById('selName').innerText = name;
+      document.getElementById('selectedFoodArea').style.display = 'block';
+      document.getElementById('searchResults').innerHTML = '';
+    }
+
+    async function submitMenuItem() {
+      const fid = document.getElementById('selFid').value;
+      const price = parseFloat(document.getElementById('selPrice').value);
+      if (!fid || !price) return alert("Price is required");
+
+      // We reuse the existing POST /menus/ logic but pass f_id directly
       const res = await fetch('/menus/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ r_id: rId, food_name: foodName, veg_or_non_veg: veg, cuisine, price })
+        body: JSON.stringify({ r_id: rId, f_id: fid, price: price })
       });
+
       if (res.ok) {
+        bootstrap.Modal.getInstance(document.getElementById('addMenuModal')).hide();
         loadMenus();
+        loadOpportunities(); // Refresh suggestions
       } else {
-        const err = await res.json();
-        alert('Error adding menu: ' + (err.error || 'Unknown error'));
+        alert("Failed to add");
       }
+    }
+
+    document.getElementById('btnAdd').onclick = () => {
+      const modal = new bootstrap.Modal(document.getElementById('addMenuModal'));
+      document.getElementById('selectedFoodArea').style.display = 'none';
+      document.getElementById('foodSearch').value = '';
+      document.getElementById('searchResults').innerHTML = '';
+      modal.show();
     };
 
-    document.addEventListener('DOMContentLoaded', loadMenus);
+    document.addEventListener('DOMContentLoaded', () => {
+      loadMenus();
+      loadOpportunities();
+    });
   </script>
 
 </body>

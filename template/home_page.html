@@ -511,15 +511,16 @@
                 </form>
 
                 <div class="d-flex align-items-center gap-2 flex-wrap">
-                    <a href="#" class="btn btn-cart">
-                        <i class="bi bi-cart3"></i> Cart <span class="badge bg-danger ms-1">{{ cart_count or 0 }}</span>
-                    </a>
+                  
 
                     {% if current_user is defined and current_user.is_authenticated %}
-                        <a href="#" class="btn btn-outline-primary">
+                      <a href="{{ url_for('user.user_cart',user_id = current_user.id ) }}" class="btn btn-cart">
+                        <i class="bi bi-cart3"></i> Cart <span class="badge bg-danger ms-1">{{ cart_count or 0 }}</span>
+                    </a>
+                        <a href="{{ url_for('user.update_user_page',user_id = current_user.id ) }}" class="btn btn-outline-primary">
                             <i class="bi bi-person-circle"></i> {{ current_user.username or 'Profile' }}
                         </a>
-                        <a href="#" class="btn btn-danger">
+                        <a href="{{ url_for('user.user_logout') }}" class="btn btn-danger">
                             <i class="bi bi-box-arrow-right"></i> Logout
                         </a>
                     {% else %}
@@ -580,20 +581,6 @@
         </div>
     </div>
 </nav>
-
-<!-- FLASH MESSAGES -->
-<div class="container mt-3">
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        {% for category, message in messages %}
-          <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-            {{ message }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-          </div>
-        {% endfor %}
-      {% endif %}
-    {% endwith %}
-</div>
 
 <!-- HERO CAROUSEL -->
 <div id="homeCarousel" class="carousel slide" data-bs-ride="carousel">
@@ -785,11 +772,15 @@
     }
 
     function viewRestaurant(id) {
+        console.log('Viewing restaurant:', id);
+        // Redirect to restaurant detail page or menu page
         window.location.href = `/restaurant/${id}`;
     }
 
     function viewMenu(id) {
-        window.location.href = `/restaurant/${id}/menu`;
+        console.log('Viewing menu for restaurant:', id);
+        // Redirect to restaurant menu page
+        window.location.href = `/restaurant/${id}/menu`; // Assuming a menu route like this
     }
 
     function showRestaurantsSection(skipAnimation = false) {
@@ -810,7 +801,7 @@
         }, animationDelay);
 
         document.getElementById('homeLink').classList.remove('active');
-        document.getElementById('restaurantsLink').classList.add('active');
+        this.classList.add('active');
 
         if (!skipAnimation) {
             setTimeout(() => {
@@ -842,6 +833,12 @@
         this.classList.add('active');
 
         window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+
+    document.getElementById('applyFilter').addEventListener('click', function() {
+        // Implement filtering logic here if needed, possibly by calling a filtered API endpoint
+        // For now, just re-fetch all restaurants
+        fetchRestaurants();
     });
 </script>
 

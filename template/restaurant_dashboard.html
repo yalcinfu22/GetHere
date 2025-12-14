@@ -159,6 +159,9 @@
                             <a href="{{ url_for('restaurant.restaurant_detail', r_id=session.user_id) }}" class="btn btn-primary btn-lg">
                                 <i class="bi bi-list-task"></i> Manage Menu
                             </a>
+                            <a href="{{ url_for('restaurant.restaurant_orders', r_id=session.user_id) }}" class="btn btn-primary btn-lg">
+                                <i class="bi bi-list-task"></i> See Orders
+                            </a>
                             <!-- This delete button is now in its own form, outside the main one -->
                         </div>
                     </div>

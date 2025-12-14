@@ -95,3 +95,76 @@ def get_order(order_id):
     finally:
         mycursor.close()
         db.close()
+
+@order.route("/search", methods=["GET"])
+def search_order():
+    #print(request.args)
+    r_id = request.args.get("r_id", type=int)
+
+    raw_delivered = request.args.get("IsDelivered")
+    IsDelivered = None
+    if raw_delivered == "0":
+        IsDelivered = 0
+    elif raw_delivered == "1":
+        IsDelivered = 1
+
+    order_by = request.args.get("order_by", default="o.order_date")
+    order = request.args.get("order", default="asc")
+
+    valid_cols = {"o.order_date", "o.sales_qty", "o.IsDelivered"}
+    if order_by not in valid_cols:
+        order_by = "o.order_date"
+
+    order_map = {
+        "order_date": "o.order_date",
+        "sales_qty": "o.sales_qty",
+        "IsDelivered": "o.IsDelivered"
+    }
+
+    order_col = order_map.get(order_by, "o.o_id")
+    order_dir = "DESC" if order == "desc" else "ASC"
+
+    limit = request.args.get("limit", default=50, type=int)
+    offset = request.args.get("offset", default=0, type=int)
+
+    try:
+        db = get_db_connection()
+        if not db:
+            return jsonify({"error": "Database connection failed"}), 500
+    except RuntimeError as e:
+        return jsonify({"error": str(e)}), 500
+
+    cur = db.cursor(dictionary=True)
+
+    try:
+        sql = ["""
+            SELECT o.o_id, o.r_id, o.order_date, o.sales_qty, o.sales_amount,
+                   o.currency, o.m_id, o.IsDelivered, f.item AS food_name
+            FROM orders o
+            INNER JOIN menu m ON o.m_id = m.m_id
+            INNER JOIN food f ON f.f_id = m.f_id 
+            WHERE 1=1
+        """]
+        params = []
+
+        if r_id is not None:
+            sql.append("AND o.r_id = %s")
+            params.append(r_id)
+
+        if IsDelivered is not None:
+            sql.append("AND o.IsDelivered = %s")
+            params.append(IsDelivered)
+
+        sql.append(f"ORDER BY {order_col} {order_dir}")
+        sql.append("LIMIT %s OFFSET %s")
+        params.extend([limit, offset])
+
+        cur.execute(" ".join(sql), tuple(params))
+        return jsonify(cur.fetchall())
+
+    except mysql.connector.Error as err:
+        return jsonify({"error": f"Database error: {err}"}), 500
+
+    finally:
+        cur.close()
+        db.close()

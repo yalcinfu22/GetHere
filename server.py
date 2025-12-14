@@ -5,6 +5,7 @@ from views.courier_view import courier
 from views.restaurant_view import restaurant
 from views.menu_view import menu
 from views.order_view import order
+from views.food_view import food
 
 def create_app():
     app = Flask(__name__, template_folder="template", static_folder="static")
@@ -22,6 +23,7 @@ def create_app():
     app.register_blueprint(restaurant, url_prefix='/restaurant')
     app.register_blueprint(menu, url_prefix='/menus')
     app.register_blueprint(order, url_prefix='/orders')
+    app.register_blueprint(food, url_prefix='/foods')
 
     return app
 
