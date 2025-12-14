@@ -305,16 +305,48 @@ def list_restaurants():
 
     cursor = db.cursor(dictionary=True)
     try:
+        # Get parameters from request URL
         search_query = request.args.get('q')
-        
+        sort_by = request.args.get('sort_by')
+        min_rating = request.args.get('min_rating')
+
+        # Start building the query
+        sql_query = "SELECT r_id, name, city, rating, cuisine, address FROM Restaurant"
+        conditions = []
+        params = []
+
+        # Add search condition
         if search_query:
-            sql_query = "SELECT r_id, name, city, rating, cuisine, address FROM Restaurant WHERE name LIKE %s LIMIT 20"
-            cursor.execute(sql_query, (f"%{search_query}%",))
-        else:
-            sql_query = "SELECT r_id, name, city, rating, cuisine, address FROM Restaurant LIMIT 20"
-            cursor.execute(sql_query)
-            
+            conditions.append("name LIKE %s")
+            params.append(f"%{search_query}%")
+        
+        # Add rating condition
+        if min_rating and min_rating != 'any':
+            try:
+                rating_val = float(min_rating)
+                conditions.append("rating >= %s")
+                params.append(rating_val)
+            except ValueError:
+                pass # Ignore invalid rating values
+
+        # Append WHERE clause if there are conditions
+        if conditions:
+            sql_query += " WHERE " + " AND ".join(conditions)
+
+        # Add sorting
+        if sort_by == 'rating':
+            sql_query += " ORDER BY rating DESC"
+        elif sort_by == 'popular':
+            # Assuming popularity is based on rating for now
+            sql_query += " ORDER BY rating DESC"
+        # The 'delivery' sort option is not implemented as there's no data for it yet.
+
+        # Add a limit to avoid sending too much data
+        sql_query += " LIMIT 40"
+
+        cursor.execute(sql_query, tuple(params))
         restaurants = cursor.fetchall()
+        
         return jsonify(restaurants)
     except Exception as e:
         print(f"Error fetching restaurants: {e}")

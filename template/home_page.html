@@ -682,11 +682,49 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        fetchRestaurants();
+        const searchInput = document.querySelector('input[name="q"]');
+        const searchForm = document.querySelector('.search-wrapper');
+        const sortByEl = document.getElementById('sortBy');
+        const minRatingEl = document.getElementById('minRating');
+
+        function triggerFetch() {
+            const query = searchInput.value;
+            const sortBy = sortByEl.value;
+            const minRating = minRatingEl.value;
+            fetchRestaurants(query, sortBy, minRating);
+        }
+
+        const initialQuery = new URLSearchParams(window.location.search).get('q');
+        if (initialQuery !== null) {
+            searchInput.value = initialQuery;
+            showRestaurantsSection(true);
+        }
+
+        let searchTimeout;
+        searchInput.addEventListener('input', function() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(triggerFetch, 300); 
+        });
+
+        searchForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            triggerFetch();
+        });
+
+        document.getElementById('applyFilter').addEventListener('click', triggerFetch);
+        sortByEl.addEventListener('change', triggerFetch);
+        minRatingEl.addEventListener('change', triggerFetch);
     });
 
-    function fetchRestaurants() {
-        fetch('/restaurant/api/restaurants')
+    function fetchRestaurants(query = '', sortBy = 'default', minRating = 'any') {
+        const params = new URLSearchParams();
+        if (query) params.append('q', query);
+        if (sortBy !== 'default') params.append('sort_by', sortBy);
+        if (minRating !== 'any') params.append('min_rating', minRating);
+        
+        const apiUrl = `/restaurant/api/restaurants?${params.toString()}`;
+
+        fetch(apiUrl)
             .then(response => response.json())
             .then(data => {
                 renderRestaurants(data);
@@ -701,6 +739,11 @@
     function renderRestaurants(restaurants) {
         const grid = document.getElementById('restaurantGrid');
         grid.innerHTML = '';
+
+        if (restaurants.length === 0) {
+            grid.innerHTML = '<p class="text-center col-12">No restaurants found matching your criteria.</p>';
+            return;
+        }
 
         restaurants.forEach(restaurant => {
             const col = document.createElement('div');
@@ -740,25 +783,38 @@
         window.location.href = `/restaurant/${id}/menu`; // Assuming a menu route like this
     }
 
-    document.getElementById('restaurantsLink').addEventListener('click', function(e) {
-        e.preventDefault();
-        
+    function showRestaurantsSection(skipAnimation = false) {
         const carousel = document.getElementById('homeCarousel');
         const restaurantsSection = document.getElementById('restaurantsSection');
         
         carousel.classList.add('shrink');
         
+        const animationDelay = skipAnimation ? 0 : 300;
+
         setTimeout(() => {
             restaurantsSection.classList.add('show');
-            fetchRestaurants(); // Fetch and render when section is shown
-        }, 300);
+            // Initial fetch when section becomes visible
+            const query = document.querySelector('input[name="q"]').value;
+            const sortBy = document.getElementById('sortBy').value;
+            const minRating = document.getElementById('minRating').value;
+            fetchRestaurants(query, sortBy, minRating);
+        }, animationDelay);
 
         document.getElementById('homeLink').classList.remove('active');
         this.classList.add('active');
 
-        setTimeout(() => {
-            restaurantsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }, 400);
+        if (!skipAnimation) {
+            setTimeout(() => {
+                restaurantsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, animationDelay + 100);
+        } else {
+             restaurantsSection.scrollIntoView({ block: 'start' });
+        }
+    }
+
+    document.getElementById('restaurantsLink').addEventListener('click', function(e) {
+        e.preventDefault();
+        showRestaurantsSection();
     });
 
     document.getElementById('homeLink').addEventListener('click', function(e) {
