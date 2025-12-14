@@ -6,7 +6,7 @@ USE term_project;
 CREATE TABLE User (
     user_id INT PRIMARY KEY AUTO_INCREMENT, -- CSV ID'leri aynen kalır, yeniler otomatik artar
     name VARCHAR(100) NOT NULL,
-    email VARCHAR(100) unique NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
     password VARCHAR(255) NOT NULL,
     Age INT,
     Gender VARCHAR(20) NOT NULL DEFAULT 'Unknown',
