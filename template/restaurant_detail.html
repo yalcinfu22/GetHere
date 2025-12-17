@@ -185,6 +185,23 @@
 
   <!-- CONTENT -->
   <div class="container py-4">
+    <!-- Restaurant Header -->
+    <div class="row align-items-center bg-white shadow-sm rounded p-4 mb-4">
+        <div class="col-md-3 text-center">
+            {% if restaurant.photo_url %}
+                <img src="{{ url_for('static', filename='images/restaurants/' + restaurant.photo_url) }}" alt="{{ restaurant.name }}" class="img-fluid rounded-circle" style="width: 150px; height: 150px; object-fit: cover;">
+            {% else %}
+                <div class="bg-light d-flex align-items-center justify-content-center rounded-circle" style="width: 150px; height: 150px;">
+                    <i class="bi bi-shop-window text-secondary" style="font-size: 4rem;"></i>
+                </div>
+            {% endif %}
+        </div>
+        <div class="col-md-9">
+            <h1 class="h2 mb-1">{{ restaurant.name }}</h1>
+            <p class="text-muted">Explore our delicious offerings</p>
+        </div>
+    </div>
+
     <!-- Header Section -->
     <div class="d-flex justify-content-between align-items-center mb-4">
       <div>

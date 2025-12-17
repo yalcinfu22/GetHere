@@ -2,6 +2,16 @@ from flask import Blueprint, render_template, request, redirect, url_for, sessio
 import bcrypt
 import uuid
 from helpers import db_helper
+import os
+from werkzeug.utils import secure_filename
+
+# Configuration for file uploads
+UPLOAD_FOLDER = 'static/images/restaurants'
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+
+def allowed_file(filename):
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 restaurant = Blueprint('restaurant', __name__)
 
@@ -70,7 +80,7 @@ def restaurant_dashboard():
         # Fetch all data for the restaurant and its manager
         query = """
             SELECT 
-                r.name as restaurant_name, r.city, r.address, r.cuisine, r.phone, r.description,
+                r.name as restaurant_name, r.city, r.address, r.cuisine, r.phone, r.description, r.photo_url,
                 rm.name as manager_first_name, rm.surname as manager_last_name, rm.email
             FROM Restaurant r
             JOIN Restaurant_Manager rm ON r.r_id = rm.managesId
@@ -210,14 +220,21 @@ def restaurant_submit_signup():
     db = db_helper.get_db_connection()
     cursor = db.cursor(dictionary=True)
 
+    photo_filename = None
+    if 'photo' in request.files:
+        file = request.files['photo']
+        if file and allowed_file(file.filename):
+            photo_filename = secure_filename(file.filename)
+            file.save(os.path.join(UPLOAD_FOLDER, photo_filename))
+
     try:
         # 1. Create Restaurant
         secret_key = uuid.uuid4().hex
         restaurant_query = """
-            INSERT INTO Restaurant (name, city, address, cuisine, phone, description, secret)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            INSERT INTO Restaurant (name, city, address, cuisine, phone, description, secret, photo_url)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
         """
-        restaurant_values = (restaurant_name, city, address, cuisine, phone, description, secret_key)
+        restaurant_values = (restaurant_name, city, address, cuisine, phone, description, secret_key, photo_filename)
         cursor.execute(restaurant_query, restaurant_values)
         new_restaurant_id = cursor.lastrowid
 
@@ -246,19 +263,34 @@ def restaurant_submit_signup():
 @restaurant.route('/<int:r_id>/menu')
 def restaurant_detail(r_id):
     """Restaurant detail page"""
-    # DEMO MODE: Always admin
     user_type = session.get('user_type')
     user_id = session.get('user_id')
 
-    is_manager = (
-        user_type == 'restaurant' and 
-        str(user_id) == str(r_id)
-    )
+    db = db_helper.get_db_connection()
+    cursor = db.cursor(dictionary=True)
+    
+    try:
+        # Fetch restaurant details including the photo
+        cursor.execute("SELECT name, photo_url FROM Restaurant WHERE r_id = %s", (r_id,))
+        restaurant_data = cursor.fetchone()
+        
+        if not restaurant_data:
+            return "Restaurant not found", 404
+            
+    except Exception as e:
+        print(f"Error fetching restaurant details: {e}")
+        return "An error occurred", 500
+    finally:
+        cursor.close()
+        db.close()
+
+    is_manager = (user_type == 'restaurant' and str(user_id) == str(r_id))
     is_customer = (user_type == 'user')
     
     return render_template(
         'restaurant_detail.html', 
         r_id=r_id, 
+        restaurant=restaurant_data,
         is_manager=is_manager,
         is_customer=is_customer
     )
@@ -311,7 +343,7 @@ def list_restaurants():
         min_rating = request.args.get('min_rating')
 
         # Start building the query
-        sql_query = "SELECT r_id, name, city, rating, cuisine, address FROM Restaurant"
+        sql_query = "SELECT r_id, name, city, rating, cuisine, address, photo_url FROM Restaurant"
         conditions = []
         params = []
 

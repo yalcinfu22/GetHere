@@ -752,7 +752,7 @@
             col.innerHTML = `
                 <div class="restaurant-card" onclick="viewRestaurant(${restaurant.r_id})">
                     <div class="restaurant-image">
-                        <img src="https://markantalya.com/wp-content/uploads/2023/02/burgerking.jpg" alt="${restaurant.name}">
+                        <img src="${restaurant.photo_url ? '/static/images/restaurants/' + restaurant.photo_url : 'https://via.placeholder.com/250x250.png?text=No+Image'}" alt="${restaurant.name}">
                     </div>
                     <div class="restaurant-info">
                         <h3 class="restaurant-name">${restaurant.name}</h3>

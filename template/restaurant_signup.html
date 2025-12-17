@@ -60,7 +60,7 @@
                         <p class="mb-0">Join the GetHere platform and grow your business</p>
                     </div>
                     <div class="card-body p-4 p-md-5">
-                        <form action="{{ url_for('restaurant.restaurant_submit_signup') }}" method="POST">
+                        <form action="{{ url_for('restaurant.restaurant_submit_signup') }}" method="POST" enctype="multipart/form-data">
                             
                             <!-- Restaurant Details -->
                             <h5 class="form-section-title">Restaurant Details</h5>
@@ -103,6 +103,10 @@
                             <div class="mb-3">
                                 <label for="description" class="form-label">Description (Optional)</label>
                                 <textarea class="form-control" id="description" name="description" rows="3"></textarea>
+                            </div>
+                            <div class="mb-3">
+                                <label for="photo" class="form-label">Restaurant Photo</label>
+                                <input type="file" class="form-control" id="photo" name="photo">
                             </div>
 
                             <!-- Manager Details -->
