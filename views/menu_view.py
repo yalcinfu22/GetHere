@@ -280,4 +280,62 @@ def search_menu():
     except mysql.connector.Error as err:
         return jsonify({"error": f"Database error: {err}"}), 500
     finally:
+        cur.close(); db.close()@menu.route("/opportunities/<int:r_id>", methods=["GET"])
+def get_opportunities(r_id):
+    try:
+        db = _get_db()
+    except RuntimeError as e:
+        return jsonify({"error": str(e)}), 500
+    
+    cur = db.cursor(dictionary=True)
+    try:
+        # Rubric Requirement: Complex Query (4+ Tables, Group By, Subquery)
+        # Goal: "Market Demand Analysis" - What are users in MY city ordering from OTHER restaurants
+        # that I do not currently have on my menu?
+        
+        # 1. Get current restaurant's city
+        cur.execute("SELECT city FROM Restaurant WHERE r_id = %s", (r_id,))
+        r_data = cur.fetchone()
+        city = r_data['city'] if r_data else 'Istanbul'
+
+        sql = """
+            SELECT 
+                MAX(f.f_id) as f_id, 
+                f.item, 
+                f.veg_or_non_veg, 
+                COUNT(o.o_id) as demand_count
+            FROM Orders o
+            JOIN Menu m ON o.m_id = m.m_id
+            JOIN Food f ON m.f_id = f.f_id
+            JOIN Restaurant r ON o.r_id = r.r_id
+            WHERE 
+                r.city = %s 
+                AND r.r_id != %s
+                AND f.item NOT IN (
+                    SELECT f2.item 
+                    FROM Menu m2 
+                    JOIN Food f2 ON m2.f_id = f2.f_id 
+                    WHERE m2.r_id = %s
+                )
+            GROUP BY f.item, f.veg_or_non_veg
+            ORDER BY demand_count DESC
+            LIMIT 5
+        """
+        cur.execute(sql, (city, r_id, r_id))
+        items = cur.fetchall()
+        
+        # Normalize keys for frontend generic usage
+        results = []
+        for i in items:
+            results.append({
+                "f_id": i['f_id'],
+                "item": i['item'],
+                "veg_or_non_veg": i['veg_or_non_veg'],
+                "popularity": i['demand_count'] 
+            })
+            
+        return jsonify(results)
+    except mysql.connector.Error as err:
+        return jsonify({"error": f"Database error: {err}"}), 500
+    finally:
         cur.close(); db.close()

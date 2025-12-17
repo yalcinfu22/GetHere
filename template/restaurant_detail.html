@@ -187,19 +187,22 @@
   <div class="container py-4">
     <!-- Restaurant Header -->
     <div class="row align-items-center bg-white shadow-sm rounded p-4 mb-4">
-        <div class="col-md-3 text-center">
-            {% if restaurant.photo_url %}
-                <img src="{{ url_for('static', filename='images/restaurants/' + restaurant.photo_url) }}" alt="{{ restaurant.name }}" class="img-fluid rounded-circle" style="width: 150px; height: 150px; object-fit: cover;">
-            {% else %}
-                <div class="bg-light d-flex align-items-center justify-content-center rounded-circle" style="width: 150px; height: 150px;">
-                    <i class="bi bi-shop-window text-secondary" style="font-size: 4rem;"></i>
-                </div>
-            {% endif %}
+      <div class="col-md-3 text-center">
+        {% if restaurant.photo_url %}
+        <img src="{{ url_for('static', filename='images/restaurants/' + restaurant.photo_url) }}"
+          alt="{{ restaurant.name }}" class="img-fluid rounded-circle"
+          style="width: 150px; height: 150px; object-fit: cover;">
+        {% else %}
+        <div class="bg-light d-flex align-items-center justify-content-center rounded-circle"
+          style="width: 150px; height: 150px;">
+          <i class="bi bi-shop-window text-secondary" style="font-size: 4rem;"></i>
         </div>
-        <div class="col-md-9">
-            <h1 class="h2 mb-1">{{ restaurant.name }}</h1>
-            <p class="text-muted">Explore our delicious offerings</p>
-        </div>
+        {% endif %}
+      </div>
+      <div class="col-md-9">
+        <h1 class="h2 mb-1">{{ restaurant.name }}</h1>
+        <p class="text-muted">Explore our delicious offerings</p>
+      </div>
     </div>
 
     <!-- Header Section -->
@@ -365,7 +368,7 @@
       if (!isManager) return;
       document.getElementById('opp-col').style.display = 'block';
 
-      const res = await fetch(`/restaurant/api/${rId}/opportunities`);
+      const res = await fetch(`/menus/opportunities/${rId}`);
       const data = await res.json();
       const list = document.getElementById('opp-list');
       list.innerHTML = '';
@@ -404,29 +407,45 @@
     let searchTimeout;
 
     searchInput.addEventListener('input', (e) => {
-      const val = e.target.value;
+      const val = e.target.value.trim();
       clearTimeout(searchTimeout);
+
+      if (val.length < 2) {
+        document.getElementById('searchResults').innerHTML = '';
+        return;
+      }
+
       searchTimeout = setTimeout(async () => {
-        if (val.length < 2) return;
         const res = await fetch(`/food/?q=${val}`);
         const data = await res.json();
         const resDiv = document.getElementById('searchResults');
         resDiv.innerHTML = '';
 
-        data.forEach(f => {
-          const a = document.createElement('a');
-          a.className = 'list-group-item list-group-item-action';
-          a.innerHTML = `${f.item} <small class="text-muted">(${f.veg_or_non_veg})</small>`;
-          a.onclick = () => selectFood(f.sample_id, f.item, f.veg_or_non_veg);
-          resDiv.appendChild(a);
-        });
+        // 1. Show existing matches
+        if (data.length > 0) {
+          data.forEach(f => {
+            const a = document.createElement('a');
+            a.className = 'list-group-item list-group-item-action';
+            a.innerHTML = `${f.item} <small class="text-muted">(${f.veg_or_non_veg})</small>`;
+            a.onclick = () => selectFood(f.sample_id, f.item, f.veg_or_non_veg);
+            resDiv.appendChild(a);
+          });
+        }
+
+        // 2. ALWAYS Show option to create new (unless exact match found maybe, but flexible is better)
+        const createOption = document.createElement('a');
+        createOption.className = 'list-group-item list-group-item-action list-group-item-light text-primary fw-bold';
+        createOption.innerHTML = `<i class="bi bi-plus-circle"></i> Create New: "${val}"`;
+        createOption.onclick = () => selectFood("", val, "Non-Veg"); // Default new to Non-Veg
+        resDiv.appendChild(createOption);
+
       }, 300);
     });
 
     function selectFood(fid, name, veg) {
-      document.getElementById('selFid').value = fid;
+      document.getElementById('selFid').value = fid; // Empty if new
       document.getElementById('selVeg').value = veg;
-      document.getElementById('selName').innerText = name;
+      document.getElementById('selName').innerText = name + (fid ? "" : " (New Item)");
       document.getElementById('selectedFoodArea').style.display = 'block';
       document.getElementById('searchResults').innerHTML = '';
     }
@@ -434,21 +453,38 @@
     async function submitMenuItem() {
       const fid = document.getElementById('selFid').value;
       const price = parseFloat(document.getElementById('selPrice').value);
-      if (!fid || !price) return alert("Price is required");
+      const foodName = document.getElementById('selName').innerText.replace(" (New Item)", "");
+      const rId = JSON.parse('{{ r_id | tojson }}');
 
-      // We reuse the existing POST /menus/ logic but pass f_id directly
+      if (!price) return alert("Price is required");
+
+      const payload = { r_id: rId, price: price };
+
+      if (fid) {
+        payload.f_id = fid;
+      } else {
+        // Creating new global food on the fly
+        payload.food_name = foodName;
+        payload.veg_or_non_veg = document.getElementById('selVeg').value || "Non-Veg";
+      }
+
       const res = await fetch('/menus/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ r_id: rId, f_id: fid, price: price })
+        body: JSON.stringify(payload)
       });
 
       if (res.ok) {
-        bootstrap.Modal.getInstance(document.getElementById('addMenuModal')).hide();
+        // Find the modal element and hide it
+        const modalEl = document.getElementById('addMenuModal');
+        const modal = bootstrap.Modal.getInstance(modalEl);
+        modal.hide();
+
         loadMenus();
         loadOpportunities(); // Refresh suggestions
       } else {
-        alert("Failed to add");
+        const err = await res.json();
+        alert("Failed to add: " + (err.error || "Unknown error"));
       }
     }
 
