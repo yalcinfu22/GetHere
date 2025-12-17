@@ -413,3 +413,107 @@ def get_opportunities(r_id):
     finally:
         cursor.close()
         db.close()
+
+@restaurant.route('/positions/create', methods=['POST'])
+def create_position():
+    """
+    Creates a new position (job listing) for the logged-in restaurant manager's restaurant.
+    Accepts both JSON and form data.
+    """
+    if session.get('user_type') != 'restaurant':
+        return jsonify({"error": "Unauthorized"}), 401
+
+    r_id = session.get('user_id') # Get r_id from session
+
+    # Get data from either JSON or form
+    if request.is_json:
+        data = request.get_json()
+    else:
+        data = request.form.to_dict()
+    
+    # Required fields
+    payment = data.get('payment')
+    
+    if not payment:
+        return jsonify({"error": "Payment is required"}), 400
+    
+    # Optional fields with defaults
+    city = data.get('city')
+    req_exp = data.get('req_exp', 0)
+    req_rating = data.get('req_rating', 0)
+    
+    db = db_helper.get_db_connection()
+    cursor = db.cursor(dictionary=True, buffered=True)
+    
+    try:
+        # Verify restaurant exists (redundant since r_id comes from session, but good for data integrity)
+        cursor.execute("SELECT r_id, name, city FROM Restaurant WHERE r_id = %s", (r_id,))
+        restaurant_data = cursor.fetchone()
+        
+        if not restaurant_data:
+            return jsonify({"error": "Restaurant not found in session"}), 404
+        
+        # Use restaurant's city from DB if not provided in form
+        if not city:
+            city = restaurant_data['city']
+        
+        # Insert new position
+        cursor.execute("""
+            INSERT INTO Positions (r_id, city, req_exp, req_rating, payment, isOpen)
+            VALUES (%s, %s, %s, %s, %s, TRUE)
+        """, (r_id, city, req_exp, req_rating, payment))
+        
+        db.commit()
+        new_position_id = cursor.lastrowid
+        
+        return jsonify({
+            "success": True,
+            "message": "Position created successfully",
+            "position_id": new_position_id,
+            "restaurant_name": restaurant_data['name']
+        }), 201
+
+    except Exception as e:
+        db.rollback()
+        print(f"Create position error: {e}")
+        return jsonify({"error": str(e)}), 500
+    finally:
+        cursor.close()
+        db.close()
+@restaurant.route('/api/positions')
+def get_positions():
+    """
+    API endpoint to get all open positions for the logged-in restaurant.
+    """
+    if session.get('user_type') != 'restaurant':
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    r_id = session.get('user_id')
+    db = db_helper.get_db_connection()
+    cursor = db.cursor(dictionary=True)
+    
+    try:
+        cursor.execute("""
+            SELECT p_id, city, payment, req_exp, req_rating, created_at
+            FROM Positions 
+            WHERE r_id = %s AND isOpen = TRUE 
+            ORDER BY created_at DESC
+        """, (r_id,))
+        
+        positions = cursor.fetchall()
+        
+        # Convert decimal and datetime to string for JSON compatibility
+        for pos in positions:
+            if pos['payment']:
+                pos['payment'] = str(pos['payment'])
+            if pos['created_at']:
+                pos['created_at'] = pos['created_at'].strftime('%Y-%m-%d %H:%M')
+        
+        return jsonify(positions)
+        
+    except Exception as e:
+        print(f"API Get Positions Error: {e}")
+        return jsonify({"error": str(e)}), 500
+    finally:
+        cursor.close()
+        db.close()

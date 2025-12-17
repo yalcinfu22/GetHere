@@ -57,6 +57,12 @@
             border-color: #dc3545;
             color: white;
         }
+        .alert-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1050;
+        }
     </style>
 </head>
 <body>
@@ -77,12 +83,12 @@
             </div>
         </div>
     </nav>
-
+    <div class="alert-container" id="alert-container"></div>
     <div class="container my-4">
-        <form action="{{ url_for('restaurant.restaurant_update') }}" method="POST">
-            <div class="row">
-                <!-- Left Column: Restaurant Info -->
-                <div class="col-lg-8">
+        <div class="row">
+            <!-- Left Column: Restaurant Info -->
+            <div class="col-lg-8">
+                <form action="{{ url_for('restaurant.restaurant_update') }}" method="POST">
                     <div class="dashboard-card mb-4">
                         <div class="card-header fs-5">
                             <i class="bi bi-building"></i> Restaurant Information
@@ -151,30 +157,68 @@
                             </div>
                         </div>
                     </div>
-                </div>
-
-                <!-- Right Column: Actions -->
-                <div class="col-lg-4">
                     <div class="dashboard-card">
-                         <div class="card-header fs-5">
-                            <i class="bi bi-gear"></i> Actions
-                        </div>
                         <div class="card-body text-center d-grid gap-3">
                             <button type="submit" class="btn btn-edit btn-lg">
                                 <i class="bi bi-check-circle"></i> Save Changes
                             </button>
-                            <a href="{{ url_for('restaurant.restaurant_detail', r_id=session.user_id) }}" class="btn btn-primary btn-lg">
-                                <i class="bi bi-list-task"></i> Manage Menu
-                            </a>
-                            <a href="{{ url_for('restaurant.restaurant_orders', r_id=session.user_id) }}" class="btn btn-primary btn-lg">
-                                <i class="bi bi-list-task"></i> See Orders
-                            </a>
-                            <!-- This delete button is now in its own form, outside the main one -->
                         </div>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Right Column: Actions -->
+            <div class="col-lg-4">
+                <div class="dashboard-card">
+                     <div class="card-header fs-5">
+                        <i class="bi bi-gear"></i> Actions
+                    </div>
+                    <div class="card-body text-center d-grid gap-3">
+                        <a href="{{ url_for('restaurant.restaurant_detail', r_id=session.user_id) }}" class="btn btn-primary btn-lg">
+                            <i class="bi bi-list-task"></i> Manage Menu
+                        </a>
+                        <a href="{{ url_for('restaurant.restaurant_orders', r_id=session.user_id) }}" class="btn btn-primary btn-lg">
+                            <i class="bi bi-list-task"></i> See Orders
+                        </a>
+                    </div>
+                </div>
+
+                <div class="dashboard-card mt-4">
+                    <div class="card-header fs-5">
+                        <i class="bi bi-person-plus"></i> Manage Positions
+                    </div>
+                    <div class="card-body p-4">
+                        <form id="createPositionForm" class="mb-3">
+                            <h6 class="mb-3">Create New Job Position:</h6>
+                            <div class="mb-3">
+                                <label for="payment" class="form-label">Payment (e.g., 500.00)</label>
+                                <input type="number" step="0.01" class="form-control" id="payment" name="payment" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="req_exp" class="form-label">Required Experience (Years)</label>
+                                <input type="number" step="1" class="form-control" id="req_exp" name="req_exp" value="0">
+                            </div>
+                            <div class="mb-3">
+                                <label for="req_rating" class="form-label">Required Rating (0.0-5.0)</label>
+                                <input type="number" step="0.1" min="0" max="5" class="form-control" id="req_rating" name="req_rating" value="0.0">
+                            </div>
+                            <div class="mb-3">
+                                <label for="city" class="form-label">City (Optional, defaults to restaurant city)</label>
+                                <input type="text" class="form-control" id="city" name="city" placeholder="e.g., Istanbul">
+                            </div>
+                            <button type="submit" class="btn btn-edit w-100">
+                                <i class="bi bi-plus-circle"></i> Create Position
+                            </button>
+                        </form>
+                        <hr>
+                        <h6>Current Open Positions:</h6>
+                        <ul id="openPositionsList" class="list-group">
+                            <li class="list-group-item text-center text-muted">Loading positions...</li>
+                        </ul>
                     </div>
                 </div>
             </div>
-        </form>
+        </div>
         
         <!-- Delete Form - Separate from the main form -->
         <div class="row justify-content-end mt-4">
@@ -196,5 +240,89 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const createPositionForm = document.getElementById('createPositionForm');
+            const alertContainer = document.getElementById('alert-container');
+
+            function showAlert(message, type = 'success') {
+                const alertDiv = document.createElement('div');
+                alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+                alertDiv.role = 'alert';
+                alertDiv.innerHTML = `
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                `;
+                alertContainer.appendChild(alertDiv);
+                setTimeout(() => alertDiv.remove(), 5000);
+            }
+
+            async function loadOpenPositions() {
+                const list = document.getElementById('openPositionsList');
+                try {
+                    const response = await fetch("{{ url_for('restaurant.get_positions') }}");
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    const positions = await response.json();
+                    
+                    list.innerHTML = '';
+                    if (positions.length === 0) {
+                        list.innerHTML = '<li class="list-group-item text-center text-muted">No open positions found.</li>';
+                    } else {
+                        positions.forEach(pos => {
+                            const item = document.createElement('li');
+                            item.className = 'list-group-item';
+                            item.innerHTML = `
+                                <div>
+                                    <strong>Payment: ${pos.payment}</strong>
+                                    <small class="d-block text-muted">Req. Exp: ${pos.req_exp}yrs, Req. Rating: ${pos.req_rating}</small>
+                                </div>
+                                <small>${pos.city}</small>
+                            `;
+                            list.appendChild(item);
+                        });
+                    }
+                } catch (error) {
+                    console.error('Failed to load positions:', error);
+                    list.innerHTML = '<li class="list-group-item text-center text-danger">Failed to load positions.</li>';
+                }
+            }
+
+            if (createPositionForm) {
+                createPositionForm.addEventListener('submit', async function(event) {
+                    event.preventDefault();
+                    
+                    const formData = new FormData(createPositionForm);
+                    const data = Object.fromEntries(formData.entries());
+
+                    try {
+                        const response = await fetch("{{ url_for('restaurant.create_position') }}", {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify(data),
+                        });
+
+                        const result = await response.json();
+
+                        if (response.ok) {
+                            showAlert(result.message || 'Position created successfully!');
+                            createPositionForm.reset();
+                            loadOpenPositions();
+                        } else {
+                            throw new Error(result.error || 'An unknown error occurred.');
+                        }
+                    } catch (error) {
+                        console.error('Form submission error:', error);
+                        showAlert(error.message, 'danger');
+                    }
+                });
+            }
+
+            loadOpenPositions();
+        });
+    </script>
 </body>
 </html>
