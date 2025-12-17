@@ -295,6 +295,91 @@ def restaurant_detail(r_id):
         is_customer=is_customer
     )
 
+@restaurant.route('/<int:r_id>')
+def restaurant_info(r_id):
+    """Restaurant statistics and information page."""
+    db = db_helper.get_db_connection()
+    cursor = db.cursor(dictionary=True)
+    
+    try:
+        # 1. Basic Restaurant Info
+        cursor.execute("SELECT * FROM Restaurant WHERE r_id = %s", (r_id,))
+        restaurant_data = cursor.fetchone()
+        if not restaurant_data:
+            return "Restaurant not found", 404
+
+        # 2. Key Performance Indicators (KPIs)
+        kpi_query = """
+            SELECT
+                COUNT(o_id) AS total_orders,
+                SUM(sales_amount) AS total_revenue,
+                COUNT(DISTINCT user_id) AS unique_customers,
+                AVG(sales_amount) AS avg_order_value
+            FROM Orders
+            WHERE r_id = %s
+        """
+        cursor.execute(kpi_query, (r_id,))
+        kpi_data = cursor.fetchone()
+
+        # 3. Menu Analysis
+        menu_query = "SELECT COUNT(*) AS total_menu_items FROM Menu WHERE r_id = %s"
+        cursor.execute(menu_query, (r_id,))
+        menu_data = cursor.fetchone()
+
+        # 4. Bestseller & Top Courier Spotlight (The Complex Query)
+        spotlight_query = """
+            SELECT
+                c.name AS courier_name,
+                f.item AS food_item,
+                COUNT(o.o_id) AS delivery_count,
+                AVG(o.courier_rate) AS avg_rating_for_this_item
+            FROM Orders o
+            JOIN Courier c ON o.c_id = c.c_id
+            JOIN Menu m ON o.m_id = m.m_id
+            JOIN Food f ON m.f_id = f.f_id
+            WHERE
+                o.r_id = %s
+                AND m.f_id = (
+                    SELECT m2.f_id
+                    FROM Orders o2
+                    JOIN Menu m2 ON o2.m_id = m2.m_id
+                    WHERE o2.r_id = %s
+                    GROUP BY m2.f_id
+                    ORDER BY COUNT(o2.o_id) DESC
+                    LIMIT 1
+                )
+            GROUP BY c.c_id, f.item
+            ORDER BY delivery_count DESC
+            LIMIT 1;
+        """
+        cursor.execute(spotlight_query, (r_id, r_id))
+        spotlight_data = cursor.fetchone()
+        
+        # Convert Decimal types to float for template rendering
+        if restaurant_data and 'rating' in restaurant_data:
+            restaurant_data['rating'] = float(restaurant_data['rating'])
+        if kpi_data:
+            if 'total_revenue' in kpi_data and kpi_data['total_revenue']:
+                kpi_data['total_revenue'] = float(kpi_data['total_revenue'])
+            if 'avg_order_value' in kpi_data and kpi_data['avg_order_value']:
+                kpi_data['avg_order_value'] = float(kpi_data['avg_order_value'])
+        if spotlight_data and 'avg_rating_for_this_item' in spotlight_data and spotlight_data['avg_rating_for_this_item']:
+            spotlight_data['avg_rating_for_this_item'] = round(float(spotlight_data['avg_rating_for_this_item']), 2)
+
+        return render_template(
+            'restaurant_info.html',
+            restaurant=restaurant_data,
+            kpis=kpi_data,
+            menu=menu_data,
+            spotlight=spotlight_data
+        )
+
+    except Exception as e:
+        print(f"Restaurant Info Page Error: {e}")
+        return "An error occurred while fetching restaurant data.", 500
+    finally:
+        cursor.close()
+        db.close()
 
 @restaurant.route('/<int:r_id>/orders')
 def restaurant_orders(r_id):
