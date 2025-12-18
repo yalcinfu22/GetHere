@@ -331,11 +331,17 @@ def update_ratings(o_id):
         cur = db.cursor()
 
         cur.execute("""
-            UPDATE orders
-            SET menu_rate = %s,
-                courier_rate = %s
+            UPDATE orders o
+            INNER JOIN courier c ON c.c_id = o.c_id
+            INNER JOIN restaurant r ON r.r_id = o.r_id
+            SET o.menu_rate = %s,
+                o.courier_rate = %s,
+                c.rating = (c.rating * c.ratingCount + %s) / (c.ratingCount + 1),
+                c.ratingCount = c.ratingCount + 1,
+                r.rating = (r.rating * r.ratingCount + %s) / (r.ratingCount + 1),
+                r.ratingCount = r.ratingCount + 1
             WHERE o_id = %s
-        """, (menu_rate, courier_rate, o_id))
+        """, (menu_rate, courier_rate, courier_rate, menu_rate, o_id))
 
         db.commit()
         return jsonify({"message": "Success", "o_id": o_id})
