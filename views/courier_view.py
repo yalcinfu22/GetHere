@@ -66,8 +66,9 @@ def courier_dashboard():
     cursor = db.cursor(dictionary=True, buffered=True)
     
     try:
+        # Get courier info including TotalDeliveries
         cursor.execute("""
-            SELECT c_id, name, surname, r_id, rating, ratingCount, taskCount 
+            SELECT c_id, name, surname, r_id, rating, ratingCount, taskCount, TotalDeliveries 
             FROM Courier 
             WHERE c_id = %s
         """, (courier_id,))
@@ -76,41 +77,44 @@ def courier_dashboard():
         # Update session with latest r_id
         session['courier_r_id'] = courier_info.get('r_id')
 
-        # 2. Get Active Tasks (FIXED: Joining Food table to get item name)
+        # 2. Get Active Tasks
         cursor.execute("""
             SELECT t.t_id, u.name as customer_name, u.address, 
-                   f.item as menu_name  -- Get 'item' from Food table, not Menu
+                   f.item as menu_name
             FROM Task t
             JOIN User u ON t.user_id = u.user_id
             LEFT JOIN Menu m ON t.m_id = m.m_id
-            LEFT JOIN Food f ON m.f_id = f.f_id  -- JOIN ADDED HERE
+            LEFT JOIN Food f ON m.f_id = f.f_id
             WHERE t.c_id = %s AND t.status = 0
             ORDER BY t.task_date ASC
         """, (courier_id,))
         active_tasks = cursor.fetchall()
 
-        # 3. Get Recent History (FIXED: Joining Food table here too)
+        # 3. Get Recent History with actual courier_rate from Orders table (limit 10)
         cursor.execute("""
-            SELECT t.t_id, f.item as menu_name
+            SELECT t.t_id, f.item as menu_name, o.courier_rate
             FROM Task t
+            JOIN Orders o ON t.o_id = o.o_id
             LEFT JOIN Menu m ON t.m_id = m.m_id
-            LEFT JOIN Food f ON m.f_id = f.f_id  -- JOIN ADDED HERE
+            LEFT JOIN Food f ON m.f_id = f.f_id
             WHERE t.c_id = %s AND t.status = 1
             ORDER BY t.task_date DESC
-            LIMIT 5
+            LIMIT 10
         """, (courier_id,))
         recent_history = cursor.fetchall()
 
-        # Add dummy data for fields missing in SQL
+        # Process active tasks
         for task in active_tasks:
             task['phone'] = "+90 555 123 4567"
-            # Fallback if menu/food lookup failed (e.g. deleted item)
-            if not task['menu_name']: task['menu_name'] = "Unknown Item"
+            if not task['menu_name']: 
+                task['menu_name'] = "Unknown Item"
             
+        # Process history - use actual courier_rate (can be NULL)
         for review in recent_history:
-            review['rating'] = 5.0
-            review['comment'] = "Great service!"
-            if not review['menu_name']: review['menu_name'] = "Unknown Item"
+            # courier_rate can be NULL if user hasn't rated yet
+            review['rating'] = float(review['courier_rate']) if review['courier_rate'] is not None else None
+            if not review['menu_name']: 
+                review['menu_name'] = "Unknown Item"
 
         return render_template('courier_dashboard.html',
                              courier=courier_info,
@@ -488,6 +492,8 @@ def my_restaurant_page():
     """
     My Restaurant page - Shows details of the restaurant where courier works.
     Includes option to leave the position.
+    
+    DEMONSTRATES: GROUP BY + NESTED SUBQUERY in leaderboard query
     """
     if 'user_id' not in session or session.get('user_type') != 'courier':
         return redirect(url_for('courier.courier_login'))
@@ -510,7 +516,8 @@ def my_restaurant_page():
             return render_template('my_restaurant.html', 
                                  courier=courier_info, 
                                  restaurant=None, 
-                                 position=None)
+                                 position=None,
+                                 leaderboard=None)
         
         # Get restaurant details
         cursor.execute("""
@@ -529,6 +536,50 @@ def my_restaurant_page():
         """, (courier_id, courier_info['r_id']))
         position = cursor.fetchone()
         
+        # =====================================================
+        # RESTAURANT LEADERBOARD (GROUP BY + NESTED SUBQUERY)
+        # Shows top 10 couriers for this restaurant
+        # Score = total_deliveries * avg_courier_rate
+        # Uses:
+        #   - GROUP BY: to aggregate deliveries and ratings per courier
+        #   - NESTED SUBQUERY: to get the restaurant ID from current courier
+        # =====================================================
+        cursor.execute("""
+            SELECT 
+                c.c_id,
+                c.name AS courier_name,
+                c.surname AS courier_surname,
+                c.rating AS courier_rating,
+                COUNT(t.t_id) AS total_deliveries,
+                AVG(o.courier_rate) AS avg_delivery_rating,
+                (COUNT(t.t_id) * COALESCE(AVG(o.courier_rate), 0)) AS score
+            FROM Courier c
+            INNER JOIN Task t ON c.c_id = t.c_id
+            INNER JOIN Orders o ON t.o_id = o.o_id
+            WHERE t.status = 1
+              AND c.r_id = (
+                  SELECT r_id 
+                  FROM Courier 
+                  WHERE c_id = %s
+              )
+            GROUP BY c.c_id, c.name, c.surname, c.rating
+            ORDER BY score DESC
+            LIMIT 10
+        """, (courier_id,))
+        
+        leaderboard = cursor.fetchall()
+        
+        # Process leaderboard data and find current courier's rank
+        for idx, entry in enumerate(leaderboard):
+            entry['rank'] = idx + 1
+            if entry['avg_delivery_rating']:
+                entry['avg_delivery_rating'] = round(float(entry['avg_delivery_rating']), 1)
+            if entry['score']:
+                entry['score'] = round(float(entry['score']), 1)
+            if entry['courier_rating']:
+                entry['courier_rating'] = float(entry['courier_rating'])
+            entry['is_current_user'] = (entry['c_id'] == courier_id)
+        
         # Convert Decimal to float for template
         if restaurant and restaurant['rating']:
             restaurant['rating'] = float(restaurant['rating'])
@@ -541,7 +592,8 @@ def my_restaurant_page():
         return render_template('my_restaurant.html',
                              courier=courier_info,
                              restaurant=restaurant,
-                             position=position)
+                             position=position,
+                             leaderboard=leaderboard)
 
     except Exception as e:
         print(f"My Restaurant page error: {e}")
@@ -1079,7 +1131,168 @@ def create_position():
 
 @courier.route('/history')
 def delivery_history_page():
-    return "Full Order History (To Be Implemented)"
+    """
+    Full Delivery History Page.
+    Shows all completed and ongoing tasks with comprehensive details.
+    
+    DEMONSTRATES MULTIPLE SQL QUERY TYPES:
+    
+    1. MULTI-JOIN QUERY (5 JOINs including LEFT OUTER JOINs):
+       - Task (base table)
+       - INNER JOIN Orders, User, Restaurant
+       - LEFT OUTER JOIN Menu, Food
+    
+    2. GROUP BY QUERY:
+       - Aggregates deliveries by restaurant with COUNT and SUM
+    
+    3. NESTED SUBQUERY:
+       - Finds restaurants where courier delivered more than average
+    """
+    if 'user_id' not in session or session.get('user_type') != 'courier':
+        return redirect(url_for('courier.courier_login'))
+    
+    courier_id = session['user_id']
+    db = db_helper.get_db_connection()
+    cursor = db.cursor(dictionary=True, buffered=True)
+    
+    try:
+        # Get courier info
+        cursor.execute("""
+            SELECT c_id, name, surname, r_id, rating, ratingCount, TotalDeliveries 
+            FROM Courier 
+            WHERE c_id = %s
+        """, (courier_id,))
+        courier_info = cursor.fetchone()
+        
+        # =====================================================
+        # QUERY 1: Complex Multi-Join Query (5 JOINs)
+        # Retrieves complete delivery history with all related entities
+        # =====================================================
+        cursor.execute("""
+            SELECT 
+                -- Task info
+                t.t_id,
+                t.task_date,
+                t.user_address AS delivery_address,
+                t.status AS task_status,
+                
+                -- Order info
+                o.o_id,
+                o.order_date,
+                o.sales_qty,
+                o.sales_amount,
+                o.currency,
+                o.IsDelivered,
+                o.courier_rate,
+                o.menu_rate,
+                
+                -- Customer info (User)
+                u.user_id,
+                u.name AS customer_name,
+                u.email AS customer_email,
+                u.city AS customer_city,
+                
+                -- Restaurant info
+                r.r_id,
+                r.name AS restaurant_name,
+                r.city AS restaurant_city,
+                r.cuisine AS restaurant_cuisine,
+                
+                -- Menu info (LEFT OUTER JOIN - can be NULL)
+                m.m_id,
+                m.price AS menu_price,
+                m.cuisine AS menu_cuisine,
+                
+                -- Food info (LEFT OUTER JOIN - can be NULL)
+                f.f_id,
+                f.item AS food_name,
+                f.veg_or_non_veg
+                
+            FROM Task t
+            INNER JOIN Orders o ON t.o_id = o.o_id
+            INNER JOIN User u ON t.user_id = u.user_id
+            INNER JOIN Restaurant r ON o.r_id = r.r_id
+            INNER JOIN Menu m ON t.m_id = m.m_id
+            INNER JOIN Food f ON m.f_id = f.f_id
+            
+            WHERE t.c_id = %s
+            ORDER BY t.task_date DESC
+        """, (courier_id,))
+        
+        deliveries = cursor.fetchall()
+        
+        # =====================================================
+        # QUERY 2: GROUP BY Query
+        # Aggregates delivery statistics by restaurant
+        # Shows: restaurant name, total deliveries, total earnings, avg rating
+        # =====================================================
+        cursor.execute("""
+            SELECT 
+                r.r_id,
+                r.name AS restaurant_name,
+                r.cuisine,
+                COUNT(t.t_id) AS delivery_count,
+                SUM(o.sales_amount) AS total_earnings,
+                AVG(o.courier_rate) AS avg_rating
+            FROM Task t
+            INNER JOIN Orders o ON t.o_id = o.o_id
+            INNER JOIN Restaurant r ON o.r_id = r.r_id
+            WHERE t.c_id = %s AND t.status = 1
+            GROUP BY r.r_id, r.name, r.cuisine
+            ORDER BY delivery_count DESC
+        """, (courier_id,))
+        
+        restaurant_stats = cursor.fetchall()
+        
+        # Convert Decimals for restaurant stats
+        for stat in restaurant_stats:
+            if stat['total_earnings']:
+                stat['total_earnings'] = float(stat['total_earnings'])
+            if stat['avg_rating']:
+                stat['avg_rating'] = round(float(stat['avg_rating']), 1)
+        
+        # Process delivery data for template
+        for delivery in deliveries:
+            # Convert Decimals to float
+            if delivery['sales_amount']:
+                delivery['sales_amount'] = float(delivery['sales_amount'])
+            if delivery['menu_price']:
+                delivery['menu_price'] = float(delivery['menu_price'])
+            if delivery['courier_rate']:
+                delivery['courier_rate'] = float(delivery['courier_rate'])
+            if delivery['menu_rate']:
+                delivery['menu_rate'] = float(delivery['menu_rate'])
+            
+            # Format dates
+            if delivery['task_date']:
+                delivery['task_date_formatted'] = delivery['task_date'].strftime('%Y-%m-%d %H:%M')
+            if delivery['order_date']:
+                delivery['order_date_formatted'] = delivery['order_date'].strftime('%Y-%m-%d %H:%M')
+            
+            # Handle NULL food name
+            if not delivery['food_name']:
+                delivery['food_name'] = 'Unknown Item'
+        
+        # Calculate summary stats
+        completed_count = sum(1 for d in deliveries if d['task_status'] == 1)
+        ongoing_count = sum(1 for d in deliveries if d['task_status'] == 0)
+        total_earnings = sum(d['sales_amount'] or 0 for d in deliveries if d['task_status'] == 1)
+        
+        return render_template('courier_delivery_history.html',
+                             courier=courier_info,
+                             deliveries=deliveries,
+                             completed_count=completed_count,
+                             ongoing_count=ongoing_count,
+                             total_earnings=total_earnings,
+                             restaurant_stats=restaurant_stats)
+
+    except Exception as e:
+        print(f"Delivery history error: {e}")
+        return f"Error: {e}", 500
+    finally:
+        cursor.close()
+        db.close()
+
 
 @courier.route('/logout')
 def courier_logout():

@@ -418,7 +418,9 @@
             <div class="history-card">
                 <div class="history-header">
                     <span>RECENT HISTORY</span>
-                    <i class="bi bi-clock-history"></i>
+                    <a href="{{ url_for('courier.delivery_history_page') }}" title="View Full History">
+                        <i class="bi bi-clock-history"></i>
+                    </a>
                 </div>
                 
                 <table class="history-table w-100">
@@ -435,17 +437,14 @@
                             <tr>
                                 <td>#{{ review.t_id }}</td>
                                 <td>
-                                    {# Reverting to 'rating' because the backend uses this key #}
-                                    {% if review.rating is not none and review.rating|int > 0 %}
+                                    {% if review.rating is not none %}
                                         <span class="text-warning">
                                             {% for i in range(review.rating|int) %}
                                                 <i class="bi bi-star-fill" style="font-size: 0.7rem;"></i>
                                             {% endfor %}
                                         </span>
                                     {% else %}
-                                        <span class="badge bg-light text-secondary border fw-normal">
-                                            Not Rated
-                                        </span>
+                                        <span class="text-muted" style="font-size: 0.75rem;">Not rated</span>
                                     {% endif %}
                                 </td>
                                 <td>{{ review.menu_name }}</td>
@@ -458,6 +457,13 @@
                         {% endif %}
                     </tbody>
                 </table>
+                {% if reviews and reviews|length > 0 %}
+                <div class="text-center mt-3">
+                    <a href="{{ url_for('courier.delivery_history_page') }}" class="text-primary text-decoration-none" style="font-size: 0.85rem;">
+                        <i class="bi bi-arrow-right-circle me-1"></i> View Full History
+                    </a>
+                </div>
+                {% endif %}
             </div>
         </div>
 

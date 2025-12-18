@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Delivery History - GetHere</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    
+    <style>
+        :root {
+            --courier-blue: #3498DB;
+            --courier-dark-blue: #2980B9;
+            --success-green: #27AE60;
+            --warning-orange: #F39C12;
+            --text-dark: #2C3E50;
+            --bg-light: #F0F8FF;
+        }
+
+        body {
+            background: linear-gradient(135deg, #E3F2FD 0%, #F0F8FF 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 25px 15px;
+        }
+
+        /* Header Section */
+        .page-header {
+            background: linear-gradient(135deg, var(--courier-blue), var(--courier-dark-blue));
+            border-radius: 20px;
+            color: white;
+            padding: 25px 30px;
+            margin-bottom: 25px;
+            box-shadow: 0 10px 30px rgba(52, 152, 219, 0.3);
+        }
+
+        .page-title {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .back-btn {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 25px;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .back-btn:hover {
+            background: rgba(255,255,255,0.3);
+            color: white;
+        }
+
+        /* Stats Cards */
+        .stats-row {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+
+        .stat-card {
+            flex: 1;
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        }
+
+        .stat-card .stat-icon {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+
+        .stat-card .stat-value {
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: var(--text-dark);
+        }
+
+        .stat-card .stat-label {
+            color: #888;
+            font-size: 0.9rem;
+        }
+
+        .stat-card.completed .stat-icon { color: var(--success-green); }
+        .stat-card.ongoing .stat-icon { color: var(--warning-orange); }
+        .stat-card.earnings .stat-icon { color: var(--courier-blue); }
+
+        /* History Table Container */
+        .history-container {
+            background: white;
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.05);
+        }
+
+        .history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .history-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--text-dark);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .filter-section {
+            display: flex;
+            gap: 10px;
+        }
+
+        .filter-btn {
+            padding: 8px 16px;
+            border-radius: 20px;
+            border: 2px solid #e0e0e0;
+            background: white;
+            color: #666;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .filter-btn:hover, .filter-btn.active {
+            border-color: var(--courier-blue);
+            background: var(--courier-blue);
+            color: white;
+        }
+
+        /* Delivery Cards */
+        .delivery-card {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-left: 4px solid var(--success-green);
+            transition: all 0.3s ease;
+        }
+
+        .delivery-card:hover {
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            transform: translateY(-2px);
+        }
+
+        .delivery-card.ongoing {
+            border-left-color: var(--warning-orange);
+        }
+
+        .delivery-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 15px;
+        }
+
+        .delivery-id {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--courier-blue);
+        }
+
+        .delivery-date {
+            color: #888;
+            font-size: 0.85rem;
+        }
+
+        .status-badge {
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .status-badge.completed {
+            background: #E8F5E9;
+            color: var(--success-green);
+        }
+
+        .status-badge.ongoing {
+            background: #FFF3E0;
+            color: var(--warning-orange);
+        }
+
+        .delivery-content {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+        }
+
+        .delivery-section {
+            padding: 10px;
+        }
+
+        .delivery-section h6 {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            color: #999;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .delivery-section .info-row {
+            font-size: 0.9rem;
+            margin-bottom: 5px;
+        }
+
+        .delivery-section .info-label {
+            color: #666;
+        }
+
+        .delivery-section .info-value {
+            font-weight: 600;
+            color: var(--text-dark);
+        }
+
+        .rating-stars {
+            color: #F1C40F;
+        }
+
+        .amount-value {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--success-green);
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #888;
+        }
+
+        .empty-state i {
+            font-size: 4rem;
+            opacity: 0.3;
+            margin-bottom: 20px;
+        }
+
+        /* Analytics Section */
+        .analytics-row {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+
+        .analytics-card {
+            flex: 1;
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        }
+
+        .analytics-card h5 {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--text-dark);
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .analytics-card h5 i {
+            color: var(--courier-blue);
+        }
+
+        .restaurant-stat-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .restaurant-stat-row:last-child {
+            border-bottom: none;
+        }
+
+        .restaurant-stat-name {
+            font-weight: 600;
+            color: var(--text-dark);
+        }
+
+        .restaurant-stat-cuisine {
+            font-size: 0.8rem;
+            color: #888;
+        }
+
+        .restaurant-stat-values {
+            text-align: right;
+        }
+
+        .restaurant-stat-count {
+            font-weight: 700;
+            color: var(--courier-blue);
+        }
+
+        .restaurant-stat-earnings {
+            font-size: 0.85rem;
+            color: var(--success-green);
+        }
+
+        .top-badge {
+            background: linear-gradient(135deg, #F1C40F, #F39C12);
+            color: white;
+            padding: 3px 10px;
+            border-radius: 10px;
+            font-size: 0.7rem;
+            font-weight: 700;
+        }
+
+        .query-badge {
+            background: #E8F4FD;
+            color: var(--courier-blue);
+            padding: 3px 8px;
+            border-radius: 5px;
+            font-size: 0.65rem;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+
+        /* Responsive */
+        @media (max-width: 992px) {
+            .delivery-content {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .stats-row, .analytics-row {
+                flex-wrap: wrap;
+            }
+            .stat-card, .analytics-card {
+                min-width: calc(50% - 10px);
+            }
+        }
+
+        @media (max-width: 576px) {
+            .delivery-content {
+                grid-template-columns: 1fr;
+            }
+            .stat-card, .analytics-card {
+                min-width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <h1 class="page-title">
+                <i class="bi bi-clock-history"></i>
+                Delivery History
+            </h1>
+            <a href="{{ url_for('courier.courier_dashboard') }}" class="back-btn">
+                <i class="bi bi-arrow-left"></i>
+                Back to Dashboard
+            </a>
+        </div>
+        <p class="mb-0 mt-2 opacity-75">
+            Complete record of all your deliveries • {{ courier.name }} {{ courier.surname or '' }}
+        </p>
+    </div>
+
+    <!-- Stats Row -->
+    <div class="stats-row">
+        <div class="stat-card completed">
+            <div class="stat-icon"><i class="bi bi-check-circle-fill"></i></div>
+            <div class="stat-value">{{ completed_count }}</div>
+            <div class="stat-label">Completed</div>
+        </div>
+        <div class="stat-card ongoing">
+            <div class="stat-icon"><i class="bi bi-hourglass-split"></i></div>
+            <div class="stat-value">{{ ongoing_count }}</div>
+            <div class="stat-label">Ongoing</div>
+        </div>
+        <div class="stat-card earnings">
+            <div class="stat-icon"><i class="bi bi-cash-stack"></i></div>
+            <div class="stat-value">${{ "%.2f"|format(total_earnings) }}</div>
+            <div class="stat-label">Total Order Value</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon" style="color: #9B59B6;"><i class="bi bi-star-fill"></i></div>
+            <div class="stat-value">{{ courier.rating or '0.0' }}</div>
+            <div class="stat-label">Your Rating</div>
+        </div>
+    </div>
+
+    <!-- Analytics Section (GROUP BY & Nested Subquery Results) -->
+    <div class="analytics-row">
+        <!-- GROUP BY Query Results: Deliveries per Restaurant -->
+        <div class="analytics-card" style="flex: 1;">
+            <h5>
+                <i class="bi bi-bar-chart-fill"></i>
+                Deliveries by Restaurant
+                <span class="query-badge">GROUP BY</span>
+            </h5>
+            {% if restaurant_stats and restaurant_stats|length > 0 %}
+                {% for stat in restaurant_stats %}
+                <div class="restaurant-stat-row">
+                    <div>
+                        <div class="restaurant-stat-name">{{ stat.restaurant_name }}</div>
+                        <div class="restaurant-stat-cuisine">{{ stat.cuisine or 'Various' }}</div>
+                    </div>
+                    <div class="restaurant-stat-values">
+                        <div class="restaurant-stat-count">{{ stat.delivery_count }} deliveries</div>
+                        <div class="restaurant-stat-earnings">${{ "%.2f"|format(stat.total_earnings or 0) }}</div>
+                        {% if stat.avg_rating %}
+                        <div style="font-size: 0.75rem; color: #F1C40F;">
+                            ⭐ {{ stat.avg_rating }}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <p class="text-muted text-center py-3">No restaurant data yet</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- History Container -->
+    <div class="history-container">
+        <div class="history-header">
+            <div class="history-title">
+                <i class="bi bi-list-ul"></i>
+                All Deliveries ({{ deliveries|length }})
+                <span class="query-badge">5-TABLE JOIN</span>
+            </div>
+            <div class="filter-section">
+                <button class="filter-btn active" onclick="filterDeliveries('all')">All</button>
+                <button class="filter-btn" onclick="filterDeliveries('completed')">Completed</button>
+                <button class="filter-btn" onclick="filterDeliveries('ongoing')">Ongoing</button>
+            </div>
+        </div>
+
+        {% if deliveries and deliveries|length > 0 %}
+            {% for delivery in deliveries %}
+            <div class="delivery-card {{ 'ongoing' if delivery.task_status == 0 else '' }}" 
+                 data-status="{{ 'ongoing' if delivery.task_status == 0 else 'completed' }}">
+                
+                <div class="delivery-header">
+                    <div>
+                        <span class="delivery-id">Order #{{ delivery.o_id }}</span>
+                        <span class="mx-2">•</span>
+                        <span class="delivery-id" style="color: #666;">Task #{{ delivery.t_id }}</span>
+                        <div class="delivery-date">
+                            <i class="bi bi-calendar3 me-1"></i>
+                            {{ delivery.task_date_formatted or 'N/A' }}
+                        </div>
+                    </div>
+                    <span class="status-badge {{ 'ongoing' if delivery.task_status == 0 else 'completed' }}">
+                        {% if delivery.task_status == 0 %}
+                            <i class="bi bi-hourglass-split me-1"></i> Ongoing
+                        {% else %}
+                            <i class="bi bi-check-circle me-1"></i> Completed
+                        {% endif %}
+                    </span>
+                </div>
+
+                <div class="delivery-content">
+                    <!-- Customer Info -->
+                    <div class="delivery-section">
+                        <h6><i class="bi bi-person me-1"></i> Customer</h6>
+                        <div class="info-row">
+                            <span class="info-value">{{ delivery.customer_name or 'N/A' }}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">{{ delivery.customer_city or 'N/A' }}</span>
+                        </div>
+                        <div class="info-row" style="font-size: 0.8rem; color: #888;">
+                            {{ delivery.delivery_address or delivery.customer_email or 'N/A' }}
+                        </div>
+                    </div>
+
+                    <!-- Restaurant Info -->
+                    <div class="delivery-section">
+                        <h6><i class="bi bi-shop me-1"></i> Restaurant</h6>
+                        <div class="info-row">
+                            <span class="info-value">{{ delivery.restaurant_name or 'N/A' }}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">{{ delivery.restaurant_city or 'N/A' }}</span>
+                        </div>
+                        <div class="info-row" style="font-size: 0.8rem; color: #888;">
+                            {{ delivery.restaurant_cuisine or 'Various' }}
+                        </div>
+                    </div>
+
+                    <!-- Menu Item Info -->
+                    <div class="delivery-section">
+                        <h6><i class="bi bi-basket me-1"></i> Menu Item</h6>
+                        <div class="info-row">
+                            <span class="info-value">{{ delivery.food_name }}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">{{ delivery.veg_or_non_veg or 'N/A' }}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Qty: </span>
+                            <span class="info-value">{{ delivery.sales_qty or 1 }}</span>
+                        </div>
+                    </div>
+
+                    <!-- Order & Rating Info -->
+                    <div class="delivery-section">
+                        <h6><i class="bi bi-receipt me-1"></i> Order Details</h6>
+                        <div class="info-row">
+                            <span class="amount-value">
+                                {{ delivery.currency or '$' }}{{ "%.2f"|format(delivery.sales_amount or 0) }}
+                            </span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Your Rating: </span>
+                            {% if delivery.courier_rate is not none %}
+                                <span class="rating-stars">
+                                    {% for i in range(delivery.courier_rate|int) %}
+                                        <i class="bi bi-star-fill"></i>
+                                    {% endfor %}
+                                    {% for i in range(5 - delivery.courier_rate|int) %}
+                                        <i class="bi bi-star"></i>
+                                    {% endfor %}
+                                </span>
+                            {% else %}
+                                <span class="text-muted">Not rated</span>
+                            {% endif %}
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Menu Rating: </span>
+                            {% if delivery.menu_rate is not none %}
+                                <span class="rating-stars">
+                                    {% for i in range(delivery.menu_rate|int) %}
+                                        <i class="bi bi-star-fill"></i>
+                                    {% endfor %}
+                                </span>
+                            {% else %}
+                                <span class="text-muted">Not rated</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="empty-state">
+                <i class="bi bi-inbox"></i>
+                <h4>No Delivery History Yet</h4>
+                <p class="text-muted">Your completed deliveries will appear here.</p>
+                <a href="{{ url_for('courier.courier_dashboard') }}" class="btn btn-primary mt-3">
+                    Go to Dashboard
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    function filterDeliveries(status) {
+        // Update active button
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        event.target.classList.add('active');
+        
+        // Filter cards
+        document.querySelectorAll('.delivery-card').forEach(card => {
+            const cardStatus = card.dataset.status;
+            if (status === 'all' || cardStatus === status) {
+                card.style.display = 'block';
+            } else {
+                card.style.display = 'none';
+            }
+        });
+    }
+</script>
+
+</body>
+</html>
