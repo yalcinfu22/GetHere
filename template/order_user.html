@@ -279,7 +279,7 @@
       }
 
       async function loadOrders() {
-        let url = `/orders/view?user_id=${userId}&o_id=${oId}`;
+        let url = `/orders/view?o_id=${oId}`;
 
         try {
           const res = await fetch(url);

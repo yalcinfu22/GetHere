@@ -103,7 +103,6 @@ def get_order(order_id):
 
 @order.route("/search", methods=["GET"])
 def search_order():
-    #print(request.args)
     r_id = request.args.get("r_id", type=int)
 
     raw_delivered = request.args.get("IsDelivered")
@@ -168,13 +167,12 @@ def search_order():
         return jsonify(cur.fetchall())
 
     except mysql.connector.Error as err:
+        print(err)
         return jsonify({"error": f"Database error: {err}"}), 500
 
     finally:
         cur.close()
         db.close()
-
-order = Blueprint('order', __name__)
 
 @order.route("/create", methods=["POST"])
 def make_an_order():
@@ -242,7 +240,6 @@ def make_an_order():
 
 @order.route("/view", methods=["GET"])
 def view_order():
-    user_id = request.args.get("user_id", type=int)
     o_id = request.args.get("o_id", type=int)
 
     try:
@@ -265,9 +262,9 @@ def view_order():
             INNER JOIN food f ON f.f_id = m.f_id
             INNER JOIN restaurant r ON o.r_id = r.r_id
             INNER JOIN courier c ON o.c_id = c.c_id  
-            WHERE o.o_id = %s AND o.user_id = %s
+            WHERE o.o_id = %s
         """]
-        params = [o_id, user_id]
+        params = [o_id]
 
         cur.execute(" ".join(sql), tuple(params))
         return jsonify(cur.fetchone())
@@ -332,21 +329,51 @@ def update_ratings(o_id):
 
         cur.execute("""
             UPDATE orders o
-            INNER JOIN courier c ON c.c_id = o.c_id
-            INNER JOIN restaurant r ON r.r_id = o.r_id
-            SET o.menu_rate = %s,
-                o.courier_rate = %s,
-                c.rating = (c.rating * c.ratingCount + %s) / (c.ratingCount + 1),
-                c.ratingCount = c.ratingCount + 1,
-                r.rating = (r.rating * r.ratingCount + %s) / (r.ratingCount + 1),
-                r.ratingCount = r.ratingCount + 1
-            WHERE o_id = %s
-        """, (menu_rate, courier_rate, courier_rate, menu_rate, o_id))
+            JOIN courier c ON c.c_id = o.c_id
+            JOIN restaurant r ON r.r_id = o.r_id
+            SET
+                c.rating =
+                    CASE
+                        WHEN o.courier_rate IS NULL AND c.ratingCount = 0
+                            THEN %s
+                        WHEN o.courier_rate IS NULL AND c.ratingCount > 0
+                            THEN (COALESCE(c.rating, 0) * c.ratingCount + %s) / (c.ratingCount + 1)
+                        WHEN o.courier_rate IS NOT NULL AND c.ratingCount > 0
+                            THEN (COALESCE(c.rating, 0) * c.ratingCount - o.courier_rate + %s) / c.ratingCount
+                        ELSE c.rating
+                    END,
+                c.ratingCount =
+                    CASE
+                        WHEN o.courier_rate IS NULL THEN c.ratingCount + 1
+                        ELSE c.ratingCount
+                    END,
+
+                r.rating =
+                    CASE
+                        WHEN o.menu_rate IS NULL AND r.rating_count = 0
+                            THEN %s
+                        WHEN o.menu_rate IS NULL AND r.rating_count > 0
+                            THEN (COALESCE(r.rating, 0) * r.rating_count + %s) / (r.rating_count + 1)
+                        WHEN o.menu_rate IS NOT NULL AND r.rating_count > 0
+                            THEN (COALESCE(r.rating, 0) * r.rating_count - o.menu_rate + %s) / r.rating_count
+                        ELSE r.rating
+                    END,
+                r.rating_count =
+                    CASE
+                        WHEN o.menu_rate IS NULL THEN r.rating_count + 1
+                        ELSE r.rating_count
+                    END,
+
+                o.menu_rate = %s,
+                o.courier_rate = %s
+            WHERE o.o_id = %s
+        """, (courier_rate, courier_rate, courier_rate, menu_rate, menu_rate, menu_rate, menu_rate, courier_rate, o_id))
 
         db.commit()
         return jsonify({"message": "Success", "o_id": o_id})
 
     except Exception as err:
+        print(err)
         return jsonify({"error": str(err)}), 500
 
     finally:
