@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Order Details</title>
+
+    <style>
+      :root {
+        --primary: #ff6b35;
+        --secondary: #f7931e;
+        --bg: #f6f7f9;
+        --card: #ffffff;
+        --text: #222;
+        --muted: #6c757d;
+        --border: #eef0f3;
+        --shadow: 0 8px 22px rgba(0, 0, 0, 0.07);
+        --radius: 16px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial,
+          sans-serif;
+        background: var(--bg);
+        color: var(--text);
+      }
+
+      .wrap {
+        max-width: 900px;
+        margin: 40px auto;
+        padding: 0 18px;
+      }
+
+      h1 {
+        margin: 0 0 6px;
+        font-size: 32px;
+        font-weight: 900;
+      }
+
+      .subtitle {
+        color: var(--muted);
+        font-weight: 700;
+        margin-bottom: 20px;
+      }
+
+      .card {
+        background: var(--card);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        padding: 18px;
+        margin-bottom: 18px;
+      }
+
+      .row {
+        display: flex;
+        justify-content: space-between;
+        gap: 14px;
+        flex-wrap: wrap;
+      }
+
+      .label {
+        color: var(--muted);
+        font-weight: 700;
+        font-size: 13px;
+      }
+
+      .value {
+        font-weight: 900;
+        font-size: 15px;
+      }
+
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        padding: 6px 12px;
+        border-radius: 999px;
+        font-weight: 900;
+        font-size: 12px;
+        background: #f4f5f7;
+      }
+
+      .veg {
+        color: #2f9e44;
+      }
+      .nonveg {
+        color: #c92a2a;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 12px;
+      }
+
+      th,
+      td {
+        padding: 12px;
+        border-bottom: 1px solid var(--border);
+        text-align: left;
+      }
+
+      th {
+        font-size: 13px;
+        color: var(--muted);
+      }
+
+      .qty-input {
+        width: 70px;
+        padding: 6px;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        font-weight: 650;
+      }
+
+      .total {
+        text-align: right;
+        font-size: 18px;
+        font-weight: 900;
+        margin-top: 12px;
+      }
+
+      .stars {
+        display: flex;
+        gap: 6px;
+        font-size: 22px;
+        cursor: pointer;
+        user-select: none;
+      }
+
+      .star {
+        color: #dee2e6;
+        transition: color 0.15s ease, transform 0.1s ease;
+      }
+
+      .star:hover {
+        transform: scale(1.15);
+      }
+
+      .star.active {
+        color: #f5c518;
+      }
+
+      .btn {
+        margin-top: 14px;
+        padding: 10px 16px;
+        border-radius: 999px;
+        border: none;
+        font-weight: 900;
+        color: #fff;
+        background: linear-gradient(135deg, var(--primary), var(--secondary));
+        cursor: pointer;
+      }
+
+      .btn-outline {
+        border: 1px solid rgba(255, 107, 53, 0.25);
+        background: #fff;
+        color: var(--primary);
+        padding: 10px 14px;
+        border-radius: 999px;
+        font-weight: 850;
+        cursor: pointer;
+        transition: 0.15s ease;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        white-space: nowrap;
+      }
+
+      .btn-outline:hover {
+        background: #fff5f2;
+        border-color: var(--primary);
+        transform: translateY(-1px);
+      }
+
+      .stars .star {
+        color: #dee2e6;
+      }
+
+      .stars .star.active {
+        color: #f5c518;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div id="wrap" class="wrap"></div>
+
+    <script>
+      const userId = JSON.parse("{{ user_id | tojson }}");
+      const oId = JSON.parse("{{ o_id | tojson }}");
+
+      const backUrl =
+        "{{ url_for('user.user_order_history', user_id=user_id) }}";
+
+      const wrap = document.getElementById("wrap");
+
+      async function loadOrders() {
+        let url = `/orders/view?user_id=${userId}&o_id=${oId}`;
+
+        try {
+          const res = await fetch(url);
+          let data = await res.json();
+
+          const order = data;
+
+          const date = new Date(order.order_date);
+
+          const formattedDate =
+            date.toLocaleDateString("en-GB", {
+              day: "2-digit",
+              month: "short",
+              year: "numeric",
+            }) +
+            " " +
+            date.toLocaleTimeString("en-GB", {
+              hour: "2-digit",
+              minute: "2-digit",
+              hour12: false,
+            });
+
+          const k = `<h1>Order Details</h1>
+                        <p class="subtitle">Order #${order.o_id}</p>
+
+                        <!-- Restaurant & Courier -->
+                        <div class="card">
+                            <div class="row">
+                            <div>
+                                <div class="label">Restaurant</div>
+                                <div class="value">${
+                                  order.restaurant_name
+                                }</div>
+                            </div>
+
+                            <div>
+                                <div class="label">Courier</div>
+                                <div class="value">${order.courier_name} ${
+            order.courier_surname
+          }</div>
+                            </div>
+
+                            <div>
+                                <span class="pill"> ${
+                                  order.IsDelivered
+                                    ? "✅ Delivered"
+                                    : "⏳ In progress"
+                                }</span>
+                            </div>
+                            </div>
+                        </div>
+
+                        <!-- Items -->
+                        <div class="card">
+                            <table>
+                            <thead>
+                                <tr>
+                                <th>Food</th>
+                                <th>Type</th>
+                                <th>Price</th>
+                                <th>Quantity</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                <td><strong>${order.food_name}</strong></td>
+                                <td>
+                                    <span class="veg"> ${
+                                      order.veg ? "🥬 Veg" : "🍗 Non-Veg"
+                                    }</span>
+                                </td>
+                                <td>${order.currency} ${order.price}</td>
+                                <td>
+                                    ${
+                                      order.IsDelivered
+                                        ? order.sales_qty
+                                        : `<input class="qty-input" type="number" min="1" value="${order.sales_qty}" onclick="changeQty(1)"/>`
+                                    }
+                                </td>
+                                </tr>
+                            </tbody>
+                            </table>
+
+                            <div class="total">Total: ${order.currency} ${
+            order.sales_amount
+          }</div>
+
+                            
+                            ${
+                              order.IsDelivered
+                                ? ""
+                                : "<button class='btn'>Update Quantity</button>"
+                            }
+                        </div>
+
+                        <!-- Ratings -->
+                        <div id="ratingCard" class="card">
+                        </div>
+
+                        <a
+                            href="${backUrl}"
+                            class="btn btn-outline"
+                            >← Back to Orders</a
+                        >`;
+          wrap.innerHTML = k;
+
+          if (order.IsDelivered) {
+            document.getElementById("ratingCard").innerHTML = `
+                <div class="label">Rate Menu</div>
+                <div class="stars" data-type="menu" data-current="${
+                  order.menu_rate ?? 0
+                }">
+                ${[1, 2, 3, 4, 5]
+                  .map(
+                    (i) => `
+                    <span class="star ${
+                      order.menu_rate && i <= order.menu_rate ? "active" : ""
+                    }" data-value="${i}">★</span>
+                `
+                  )
+                  .join("")}
+                </div>
+
+                <div class="label" style="margin-top:12px">Rate Courier</div>
+                <div class="stars" data-type="courier" data-current="${
+                  order.courier_rate ?? 0
+                }">
+                ${[1, 2, 3, 4, 5]
+                  .map(
+                    (i) => `
+                    <span class="star ${
+                      order.courier_rate && i <= order.courier_rate
+                        ? "active"
+                        : ""
+                    }" data-value="${i}">★</span>
+                `
+                  )
+                  .join("")}
+                </div>
+
+                <button id="submitRating" class="btn">Submit Ratings</button>
+            `;
+
+            document.querySelectorAll(".stars").forEach((starGroup) => {
+              let current = Number(starGroup.dataset.current);
+              const stars = [...starGroup.querySelectorAll(".star")];
+
+              const paintStars = (count) => {
+                stars.forEach((star) => {
+                  star.classList.toggle(
+                    "active",
+                    Number(star.dataset.value) <= count
+                  );
+                });
+              };
+
+              stars.forEach((star) => {
+                star.addEventListener("mouseenter", () => {
+                  paintStars(Number(star.dataset.value));
+                });
+
+                star.addEventListener("mouseleave", () => {
+                  paintStars(current);
+                });
+
+                star.addEventListener("click", () => {
+                  current = Number(star.dataset.value);
+                  starGroup.dataset.current = current;
+                  paintStars(current);
+                });
+              });
+            });
+          }
+        } catch (err) {
+          console.error("Error loading orders:", err);
+          document.getElementById("order-list").innerHTML =
+            '<div class="col-12 text-center text-danger">Failed to load orders.</div>';
+        }
+      }
+
+      loadOrders();
+    </script>
+  </body>
+</html>

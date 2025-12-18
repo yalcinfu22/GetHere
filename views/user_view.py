@@ -273,3 +273,14 @@ def user_order_history(user_id):
          # to do  update cart count
     else :
         return redirect(url_for("home_page.home_page"))
+
+
+@user.route('profile/user_id=<int:user_id>/history/<int:o_id>')
+def manage_order(user_id, o_id):
+     #User order page
+     
+     return render_template(
+          'order_user.html',
+          user_id=user_id,
+          o_id=o_id
+     )

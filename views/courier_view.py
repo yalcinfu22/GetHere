@@ -350,14 +350,74 @@ def active_tasks_page():
     return "Detailed Active Tasks Page (To Be Implemented)"
 
 
+@courier.route('/tasks/api/details/<int:task_id>', methods=['GET'])
+def get_task_details(task_id):
+    """
+    API Endpoint to get full task details for the modal.
+    Returns: customer info, food details, order info, addresses.
+    """
+    if 'user_id' not in session or session.get('user_type') != 'courier':
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    courier_id = session['user_id']
+    db = db_helper.get_db_connection()
+    cursor = db.cursor(dictionary=True, buffered=True)
+    
+    try:
+        # Get complete task details with all related info
+        cursor.execute("""
+            SELECT 
+                t.t_id, t.o_id, t.c_id, t.user_id, t.m_id, t.task_date, 
+                t.user_address, t.status,
+                u.name as customer_name, 
+                u.email as customer_email, u.address as customer_full_address,
+                u.city as customer_city,
+                o.sales_qty, o.sales_amount, o.currency, o.order_date,
+                f.item as food_name, f.veg_or_non_veg,
+                m.price as food_price, m.cuisine as food_cuisine
+            FROM Task t
+            JOIN User u ON t.user_id = u.user_id
+            JOIN Orders o ON t.o_id = o.o_id
+            LEFT JOIN Menu m ON t.m_id = m.m_id
+            LEFT JOIN Food f ON m.f_id = f.f_id
+            WHERE t.t_id = %s AND t.c_id = %s
+        """, (task_id, courier_id))
+        
+        task = cursor.fetchone()
+        
+        if not task:
+            return jsonify({"error": "Task not found or does not belong to you"}), 404
+        
+        # Convert Decimal/datetime for JSON
+        if task['sales_amount']:
+            task['sales_amount'] = float(task['sales_amount'])
+        if task['food_price']:
+            task['food_price'] = float(task['food_price'])
+        if task['task_date']:
+            task['task_date'] = task['task_date'].strftime('%Y-%m-%d %H:%M')
+        if task['order_date']:
+            task['order_date'] = task['order_date'].strftime('%Y-%m-%d %H:%M')
+        
+        return jsonify({"success": True, "task": task})
+
+    except Exception as e:
+        print(f"Get task details error: {e}")
+        return jsonify({"error": str(e)}), 500
+    finally:
+        cursor.close()
+        db.close()
+
+
 @courier.route('/tasks/complete/<int:task_id>', methods=['POST'])
 def complete_task(task_id):
     """
     Complete a delivery task.
     This will:
-    1. Set task status to 1 (completed)
-    2. Increment deliveries_made in Positions table
-    3. Increment taskCount in Courier table
+    1. Set Task.status = 1 (completed)
+    2. Set Orders.IsDelivered = TRUE
+    3. Increment Positions.deliveries_made (if courier has a position)
+    4. Increment Courier.TotalDeliveries
+    5. Decrement Courier.taskCount (active tasks)
     """
     if 'user_id' not in session or session.get('user_type') != 'courier':
         return jsonify({"error": "Unauthorized"}), 401
@@ -369,7 +429,7 @@ def complete_task(task_id):
     try:
         # Verify task belongs to this courier and is not completed
         cursor.execute("""
-            SELECT t.t_id, t.c_id, t.status, c.r_id
+            SELECT t.t_id, t.c_id, t.status, t.o_id, c.r_id
             FROM Task t
             JOIN Courier c ON t.c_id = c.c_id
             WHERE t.t_id = %s AND t.c_id = %s
@@ -387,7 +447,12 @@ def complete_task(task_id):
             UPDATE Task SET status = 1 WHERE t_id = %s
         """, (task_id,))
         
-        # 2. Increment deliveries_made in Positions (if courier has a position)
+        # 2. Update Order.IsDelivered = TRUE
+        cursor.execute("""
+            UPDATE Orders SET IsDelivered = TRUE WHERE o_id = %s
+        """, (task['o_id'],))
+        
+        # 3. Increment deliveries_made in Positions (if courier has a position)
         if task['r_id']:
             cursor.execute("""
                 UPDATE Positions 
@@ -395,11 +460,11 @@ def complete_task(task_id):
                 WHERE c_id = %s AND r_id = %s
             """, (courier_id, task['r_id']))
         
-        # 3. Increment taskCount and TotalDeliveries in Courier table
+        # 4. Update Courier: increment TotalDeliveries, decrement taskCount (if > 0)
         cursor.execute("""
             UPDATE Courier 
-            SET taskCount = taskCount + 1,
-                TotalDeliveries = TotalDeliveries + 1
+            SET TotalDeliveries = TotalDeliveries + 1,
+                taskCount = GREATEST(taskCount - 1, 0)
             WHERE c_id = %s
         """, (courier_id,))
         
@@ -1127,13 +1192,8 @@ def get_courier(courier_id):
 
 @courier.route("/", methods=["POST"])
 def create_courier_api():
-
-    user_id = session.get('user_id')
-    if not user_id:
-        return jsonify({"error": "You must be logged in to place an order"}), 401
-
-    data = request.get_json() or {}
     """Creates a new courier via JSON (API style)."""
+    data = request.get_json()
     if not data:
         return jsonify({"error": "No input data provided"}), 400
         
@@ -1193,7 +1253,6 @@ def create_courier_api():
         "message": "Courier created successfully",
         "c_id": new_courier_id
     }), 201
-
 
 def find_available_courier(cursor, r_id):
     """

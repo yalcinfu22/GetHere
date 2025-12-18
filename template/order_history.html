@@ -335,7 +335,7 @@
 
           <div class="actions">
             <!-- ONE BUTTON ONLY -->
-            <a class="btn-solid" href="#">📄 Details & Review</a>
+            <a class="btn-solid" href="{{ url_for('user.manage_order', user_id=session.user_id, o_id=o.o_id) }}">📄 Details & Review</a>
           </div>
         </div>
       </div>

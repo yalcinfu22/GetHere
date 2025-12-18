@@ -239,3 +239,42 @@ def make_an_order():
     finally:
         if 'cursor' in locals() and cursor: cursor.close()
         if 'db' in locals() and db: db.close()
+
+@order.route("/view", methods=["GET"])
+def view_order():
+    user_id = request.args.get("user_id", type=int)
+    o_id = request.args.get("o_id", type=int)
+
+    try:
+        db = get_db_connection()
+        if not db:
+            return jsonify({"error": "Database connection failed"}), 500
+    except RuntimeError as e:
+        return jsonify({"error": str(e)}), 500
+
+    cur = db.cursor(dictionary=True)
+
+    try:
+        sql = ["""
+            SELECT o.o_id, o.r_id, o.order_date, o.sales_qty, o.sales_amount, o.courier_rate,
+                   o.currency, o.m_id, o.c_id, o.IsDelivered, o.menu_rate, f.item AS food_name,
+                   f.veg_or_non_veg AS veg, c.name AS courier_name, c.surname AS courier_surname,
+                   m.price AS price, r.name AS restaurant_name, r.rating AS restaurant_rating
+            FROM orders o
+            INNER JOIN menu m ON o.m_id = m.m_id
+            INNER JOIN food f ON f.f_id = m.f_id
+            INNER JOIN restaurant r ON o.r_id = r.r_id
+            INNER JOIN courier c ON o.c_id = c.c_id  
+            WHERE o.o_id = %s AND o.user_id = %s
+        """]
+        params = [o_id, user_id]
+
+        cur.execute(" ".join(sql), tuple(params))
+        return jsonify(cur.fetchone())
+
+    except mysql.connector.Error as err:
+        return jsonify({"error": f"Database error: {err}"}), 500
+
+    finally:
+        cur.close()
+        db.close()
