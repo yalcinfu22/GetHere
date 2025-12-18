@@ -280,7 +280,9 @@ def search_menu():
     except mysql.connector.Error as err:
         return jsonify({"error": f"Database error: {err}"}), 500
     finally:
-        cur.close(); db.close()@menu.route("/opportunities/<int:r_id>", methods=["GET"])
+        cur.close(); db.close()
+
+@menu.route("/opportunities/<int:r_id>", methods=["GET"])
 def get_opportunities(r_id):
     try:
         db = _get_db()
