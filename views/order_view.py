@@ -278,3 +278,98 @@ def view_order():
     finally:
         cur.close()
         db.close()
+
+@order.route("/update/<int:o_id>", methods=["PUT"])
+def update_order(o_id):
+    data = request.get_json() or {}
+    try:
+        sales_qty = int(data.get("new_qty"))
+
+        db = get_db_connection()
+        if not db: return jsonify({"error": "DB Connection Fail"}), 500
+        
+        cur = db.cursor(dictionary=True)
+
+        cur.execute("""
+            UPDATE orders o
+            INNER JOIN menu m ON o.m_id = m.m_id 
+            SET sales_qty = %s, sales_amount = %s * m.price
+            WHERE o_id = %s
+        """, (sales_qty, sales_qty, o_id))
+
+        db.commit()
+        return jsonify({"message": "Success", "o_id": o_id})
+    
+    except mysql.connector.Error as err:
+        return jsonify({"error": f"Database error: {err}"}), 500
+    
+    finally:
+        cur.close()
+        db.close()
+
+@order.route("/rate/<int:o_id>", methods=["PUT"])
+def update_ratings(o_id):
+    data = request.get_json() or {}
+
+    try:
+        menu_rate = data.get("menu_rate")
+        courier_rate = data.get("courier_rate")
+
+        if menu_rate is None or courier_rate is None:
+            return jsonify({"error": "Missing ratings"}), 400
+
+        menu_rate = int(menu_rate)
+        courier_rate = int(courier_rate)
+
+        if not (1 <= menu_rate <= 5 and 1 <= courier_rate <= 5):
+            return jsonify({"error": "Ratings must be between 1 and 5"}), 400
+
+        db = get_db_connection()
+        if not db:
+            return jsonify({"error": "DB Connection Fail"}), 500
+
+        cur = db.cursor()
+
+        cur.execute("""
+            UPDATE orders
+            SET menu_rate = %s,
+                courier_rate = %s
+            WHERE o_id = %s
+        """, (menu_rate, courier_rate, o_id))
+
+        db.commit()
+        return jsonify({"message": "Success", "o_id": o_id})
+
+    except Exception as err:
+        return jsonify({"error": str(err)}), 500
+
+    finally:
+        cur.close()
+        db.close()
+
+
+@order.route("/delete/<int:o_id>", methods=["DELETE"])
+def delete_order(o_id):
+    data = request.get_json() or {}
+    try:
+        db = get_db_connection()
+        if not db: return jsonify({"error": "DB Connection Fail"}), 500
+        
+        cur = db.cursor(dictionary=True)
+
+        cur.execute("""
+            DELETE FROM orders WHERE o_id = %s
+        """, (o_id,))
+
+        db.commit()
+        return jsonify({"message": "Success"})
+    
+    except mysql.connector.Error as err:
+        return jsonify({"error": f"Database error: {err}"}), 500
+    
+    finally:
+        cur.close()
+        db.close()
+
+
+    
