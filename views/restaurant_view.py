@@ -87,12 +87,14 @@ def restaurant_dashboard():
             WHERE r.r_id = %s
         """
         cursor.execute(query, (r_id,))
-        data = cursor.fetchone()
+        results = cursor.fetchall()
 
-        if not data:
+        if not results:
             # This case might happen if data is inconsistent
             session.clear()
             return redirect(url_for('restaurant.restaurant_login'))
+
+        data = results[0]  # Use the first manager's data for the main dashboard display
 
         return render_template('restaurant_dashboard.html', data=data)
 
@@ -229,12 +231,11 @@ def restaurant_submit_signup():
 
     try:
         # 1. Create Restaurant
-        secret_key = uuid.uuid4().hex
         restaurant_query = """
-            INSERT INTO Restaurant (name, city, address, cuisine, phone, description, secret, photo_url)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            INSERT INTO Restaurant (name, city, address, cuisine, phone, description, photo_url)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
         """
-        restaurant_values = (restaurant_name, city, address, cuisine, phone, description, secret_key, photo_filename)
+        restaurant_values = (restaurant_name, city, address, cuisine, phone, description, photo_filename)
         cursor.execute(restaurant_query, restaurant_values)
         new_restaurant_id = cursor.lastrowid
 
@@ -653,6 +654,89 @@ def get_positions():
     except Exception as e:
         print(f"API Get Positions Error: {e}")
         return jsonify({"error": str(e)}), 500
+    finally:
+        cursor.close()
+        db.close()
+
+@restaurant.route('/api/managers', methods=['GET'])
+def get_managers():
+    if session.get('user_type') != 'restaurant':
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    r_id = session.get('user_id')
+    db = db_helper.get_db_connection()
+    cursor = db.cursor(dictionary=True)
+    
+    try:
+        cursor.execute("SELECT rm_id, name, surname, email FROM Restaurant_Manager WHERE managesId = %s", (r_id,))
+        managers = cursor.fetchall()
+        return jsonify(managers)
+    except Exception as e:
+        print(f"API Get Managers Error: {e}")
+        return jsonify({"error": str(e)}), 500
+    finally:
+        cursor.close()
+        db.close()
+
+@restaurant.route('/api/managers/add', methods=['POST'])
+def add_manager():
+    if session.get('user_type') != 'restaurant':
+        return jsonify({"error": "Unauthorized"}), 401
+
+    r_id = session.get('user_id')
+    data = request.get_json()
+    name = data.get('name')
+    surname = data.get('surname')
+    email = data.get('email')
+    password = data.get('password')
+
+    if not all([name, email, password]):
+        return jsonify({"error": "Name, email, and password are required"}), 400
+
+    password_hash = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt())
+    
+    db = db_helper.get_db_connection()
+    cursor = db.cursor()
+
+    try:
+        cursor.execute("""
+            INSERT INTO Restaurant_Manager (name, surname, email, password, managesId)
+            VALUES (%s, %s, %s, %s, %s)
+        """, (name, surname, email, password_hash, r_id))
+        db.commit()
+        return jsonify({"message": "Manager added successfully!"}), 201
+    except Exception as e:
+        db.rollback()
+        print(f"Add manager error: {e}")
+        return jsonify({"error": "Failed to add manager"}), 500
+    finally:
+        cursor.close()
+        db.close()
+
+@restaurant.route('/api/managers/delete', methods=['POST'])
+def delete_manager():
+    if session.get('user_type') != 'restaurant':
+        return jsonify({"error": "Unauthorized"}), 401
+
+    data = request.get_json()
+    rm_id = data.get('rm_id')
+
+    if not rm_id:
+        return jsonify({"error": "Manager ID is required"}), 400
+
+    db = db_helper.get_db_connection()
+    cursor = db.cursor()
+
+    try:
+        cursor.execute("DELETE FROM Restaurant_Manager WHERE rm_id = %s", (rm_id,))
+        db.commit()
+        if cursor.rowcount == 0:
+            return jsonify({"error": "Manager not found"}), 404
+        return jsonify({"message": "Manager deleted successfully!"})
+    except Exception as e:
+        db.rollback()
+        print(f"Delete manager error: {e}")
+        return jsonify({"error": "Failed to delete manager"}), 500
     finally:
         cursor.close()
         db.close()

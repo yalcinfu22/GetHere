@@ -4,7 +4,6 @@ from mysql.connector import Error
 import numpy as np
 import os
 import time
-import uuid
 
 import dotenv
 dotenv.load_dotenv()
@@ -138,22 +137,20 @@ def import_restaurants(cursor, conn):
         df.rename(columns={'id': 'r_id', 'menu': 'menu_json'}, inplace=True)
         df['rating'] = pd.to_numeric(df['rating'], errors='coerce').fillna(0.0)
         df['rating_count'] = df['rating_count'].astype(str).str.extract(r'(\d+)').fillna(0).astype(int)
-        df['secret'] = [uuid.uuid4().hex for _ in range(len(df.index))]
         df = df.where(pd.notnull(df), None)
 
-        cols = ['r_id', 'name', 'city', 'rating', 'rating_count', 'cost', 
-                'cuisine', 'lic_no', 'link', 'address', 'menu_json', 'secret']
-        
+        cols = ['r_id', 'name', 'city', 'rating', 'rating_count', 'cost',
+                'cuisine', 'lic_no', 'link', 'address', 'menu_json']
+
         data = df[cols].values.tolist()
         query = """
-        INSERT IGNORE INTO Restaurant 
-        (r_id, name, city, rating, rating_count, cost, cuisine, lic_no, link, address, menu_json, secret) 
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        INSERT IGNORE INTO Restaurant
+        (r_id, name, city, rating, rating_count, cost, cuisine, lic_no, link, address, menu_json)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """
         insert_data_in_batches(cursor, conn, query, data, "Restaurant")
     except Exception as e:
         print(f"Restaurant hata: {e}")
-
 def import_couriers(cursor, conn):
     # CSV'den gelen gerçek kuryeler (ID 1'den sonrasına eklenecekler çünkü ID 1'i biz aldık)
     file_path = get_csv_path('couriers.csv')

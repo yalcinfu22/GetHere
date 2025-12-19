@@ -35,7 +35,6 @@ CREATE TABLE Restaurant (
     description TEXT,
     photo_url VARCHAR(255) DEFAULT NULL,
     menu_json TEXT, 
-    secret VARCHAR(255) NOT NULL UNIQUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
