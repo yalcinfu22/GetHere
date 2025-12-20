@@ -36,6 +36,7 @@ def restaurant_submit_login():
         # Use explicit column aliases to avoid name collision
         query = """
             SELECT
+                rm.rm_id,
                 rm.name AS manager_name,
                 rm.password,
                 r.r_id,
@@ -50,6 +51,7 @@ def restaurant_submit_login():
         if manager_data and bcrypt.checkpw(password.encode("utf-8"), manager_data['password'].encode("utf-8")):
             # Store all relevant info in the session
             session['user_id'] = manager_data['r_id'] # The restaurant ID
+            session['manager_id'] = manager_data['rm_id'] # The manager's unique ID
             session['user_type'] = 'restaurant'
             session['restaurant_name'] = manager_data['restaurant_name']
             session['manager_name'] = manager_data['manager_name']
@@ -73,28 +75,28 @@ def restaurant_dashboard():
         return redirect(url_for('restaurant.restaurant_login'))
 
     r_id = session.get('user_id')
+    manager_id = session.get('manager_id') # Get the specific manager's ID
     db = db_helper.get_db_connection()
     cursor = db.cursor(dictionary=True)
 
     try:
-        # Fetch all data for the restaurant and its manager
+        # Fetch data for the specific manager and their restaurant
         query = """
             SELECT 
                 r.name as restaurant_name, r.city, r.address, r.cuisine, r.phone, r.description, r.photo_url,
                 rm.name as manager_first_name, rm.surname as manager_last_name, rm.email
             FROM Restaurant r
             JOIN Restaurant_Manager rm ON r.r_id = rm.managesId
-            WHERE r.r_id = %s
+            WHERE r.r_id = %s AND rm.rm_id = %s
         """
-        cursor.execute(query, (r_id,))
-        results = cursor.fetchall()
+        cursor.execute(query, (r_id, manager_id))
+        data = cursor.fetchone() # Fetch the specific manager
 
-        if not results:
+        if not data:
             # This case might happen if data is inconsistent
             session.clear()
+            flash('Your session was invalid. Please log in again.', 'warning')
             return redirect(url_for('restaurant.restaurant_login'))
-
-        data = results[0]  # Use the first manager's data for the main dashboard display
 
         return render_template('restaurant_dashboard.html', data=data)
 
@@ -112,6 +114,7 @@ def restaurant_update():
         return redirect(url_for('restaurant.restaurant_login'))
 
     r_id = session.get('user_id')
+    manager_id = session.get('manager_id') # Get manager's unique ID
     db = db_helper.get_db_connection()
     cursor = db.cursor()
 
@@ -128,7 +131,7 @@ def restaurant_update():
         manager_last_name = request.form.get("manager_last_name")
         email = request.form.get("email")
 
-        # Update Restaurant table
+        # Update Restaurant table (this is general for the restaurant)
         r_query = """
             UPDATE Restaurant 
             SET name=%s, city=%s, address=%s, cuisine=%s, phone=%s, description=%s
@@ -136,15 +139,19 @@ def restaurant_update():
         """
         cursor.execute(r_query, (restaurant_name, city, address, cuisine, phone, description, r_id))
 
-        # Update Restaurant_Manager table
+        # Update the specific Restaurant_Manager's table
         rm_query = """
             UPDATE Restaurant_Manager
             SET name=%s, surname=%s, email=%s
-            WHERE managesId = %s
+            WHERE rm_id = %s
         """
-        cursor.execute(rm_query, (manager_first_name, manager_last_name, email, r_id))
+        cursor.execute(rm_query, (manager_first_name, manager_last_name, email, manager_id))
 
         db.commit()
+        
+        # Update the session if the manager's name changed
+        session['manager_name'] = manager_first_name
+        
         flash('Your information has been updated successfully!', 'success')
 
     except Exception as e:
@@ -715,28 +722,47 @@ def add_manager():
 
 @restaurant.route('/api/managers/delete', methods=['POST'])
 def delete_manager():
+    """
+    Deletes a manager, ensuring at least one manager remains and a manager cannot delete themselves.
+    """
     if session.get('user_type') != 'restaurant':
         return jsonify({"error": "Unauthorized"}), 401
 
     data = request.get_json()
-    rm_id = data.get('rm_id')
+    rm_id_to_delete = data.get('rm_id')
+    current_manager_id = session.get('manager_id')
+    r_id = session.get('user_id')
 
-    if not rm_id:
+    if not rm_id_to_delete:
         return jsonify({"error": "Manager ID is required"}), 400
 
+    if rm_id_to_delete == current_manager_id:
+        return jsonify({"error": "You cannot delete your own account from this panel."}), 403
+
     db = db_helper.get_db_connection()
-    cursor = db.cursor()
+    cursor = db.cursor(dictionary=True)
 
     try:
-        cursor.execute("DELETE FROM Restaurant_Manager WHERE rm_id = %s", (rm_id,))
+        # Check how many managers are left
+        cursor.execute("SELECT COUNT(*) as count FROM Restaurant_Manager WHERE managesId = %s", (r_id,))
+        manager_count = cursor.fetchone()['count']
+
+        if manager_count <= 1:
+            return jsonify({"error": "Cannot delete the last manager of the restaurant."}), 403
+
+        # Proceed with deletion
+        cursor.execute("DELETE FROM Restaurant_Manager WHERE rm_id = %s", (rm_id_to_delete,))
         db.commit()
+        
         if cursor.rowcount == 0:
-            return jsonify({"error": "Manager not found"}), 404
+            return jsonify({"error": "Manager not found or already deleted."}), 404
+            
         return jsonify({"message": "Manager deleted successfully!"})
+
     except Exception as e:
         db.rollback()
         print(f"Delete manager error: {e}")
-        return jsonify({"error": "Failed to delete manager"}), 500
+        return jsonify({"error": "An internal error occurred."}), 500
     finally:
         cursor.close()
         db.close()
