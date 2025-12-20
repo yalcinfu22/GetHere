@@ -130,6 +130,7 @@ def restaurant_update():
         manager_first_name = request.form.get("manager_first_name")
         manager_last_name = request.form.get("manager_last_name")
         email = request.form.get("email")
+        password = request.form.get("password")
 
         # Update Restaurant table (this is general for the restaurant)
         r_query = """
@@ -139,13 +140,20 @@ def restaurant_update():
         """
         cursor.execute(r_query, (restaurant_name, city, address, cuisine, phone, description, r_id))
 
-        # Update the specific Restaurant_Manager's table
-        rm_query = """
-            UPDATE Restaurant_Manager
-            SET name=%s, surname=%s, email=%s
-            WHERE rm_id = %s
-        """
-        cursor.execute(rm_query, (manager_first_name, manager_last_name, email, manager_id))
+        # Start building the manager update query
+        rm_query_parts = ["name=%s", "surname=%s", "email=%s"]
+        rm_values = [manager_first_name, manager_last_name, email]
+
+        # If a new password is provided, hash it and add to query
+        if password:
+            password_hash = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt())
+            rm_query_parts.append("password=%s")
+            rm_values.append(password_hash)
+
+        # Finalize and execute the manager update query
+        rm_query = f"UPDATE Restaurant_Manager SET {', '.join(rm_query_parts)} WHERE rm_id = %s"
+        rm_values.append(manager_id)
+        cursor.execute(rm_query, tuple(rm_values))
 
         db.commit()
         
