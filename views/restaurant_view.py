@@ -675,6 +675,53 @@ def get_positions():
         cursor.close()
         db.close()
 
+@restaurant.route('/api/positions/delete', methods=['POST'])
+def delete_position():
+    """
+    Deletes a position for the logged-in restaurant.
+    """
+    if session.get('user_type') != 'restaurant':
+        return jsonify({"error": "Unauthorized"}), 401
+
+    data = request.get_json()
+    p_id_to_delete = data.get('p_id')
+    r_id = session.get('user_id')
+
+    if not p_id_to_delete:
+        return jsonify({"error": "Position ID is required"}), 400
+
+    db = db_helper.get_db_connection()
+    cursor = db.cursor(dictionary=True)
+
+    try:
+        # Verify the position belongs to the restaurant before deleting
+        cursor.execute("SELECT r_id FROM Positions WHERE p_id = %s", (p_id_to_delete,))
+        position = cursor.fetchone()
+        
+        if not position:
+            return jsonify({"error": "Position not found."}), 404
+        
+        if position['r_id'] != r_id:
+            return jsonify({"error": "Forbidden. You can only delete your own positions."}), 403
+
+        # Proceed with deletion
+        cursor.execute("DELETE FROM Positions WHERE p_id = %s", (p_id_to_delete,))
+        db.commit()
+        
+        if cursor.rowcount == 0:
+            # This case is unlikely if we passed the check above, but for safety
+            return jsonify({"error": "Position not found or already deleted."}), 404
+            
+        return jsonify({"message": "Position deleted successfully!"})
+
+    except Exception as e:
+        db.rollback()
+        print(f"Delete position error: {e}")
+        return jsonify({"error": "An internal error occurred."}), 500
+    finally:
+        cursor.close()
+        db.close()
+
 @restaurant.route('/api/managers', methods=['GET'])
 def get_managers():
     if session.get('user_type') != 'restaurant':
