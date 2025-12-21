@@ -326,6 +326,12 @@
             </div>`;
           }
 
+
+          let badge = '';
+          if (m.order_count >= 5) {
+            badge = '<span class="badge bg-warning text-dark me-2" style="font-size: 0.7em">Bestseller</span>';
+          }
+
           const card = `
           <div class="col">
             <div class="card h-100 shadow-sm border-0 hover-shadow transition-all">
@@ -336,7 +342,10 @@
               
               <div class="card-body">
                 <div class="d-flex justify-content-between align-items-start mb-2">
-                    <h5 class="card-title mb-0 fw-bold text-dark">${m.food_name || '(Unnamed)'}</h5>
+                    <h5 class="card-title mb-0 fw-bold text-dark d-flex align-items-center">
+                        ${badge}
+                        <span>${m.food_name || '(Unnamed)'}</span>
+                    </h5>
                     <span class="badge bg-success bg-opacity-10 text-success rounded-pill">${m.price?.toFixed ? m.price.toFixed(2) : m.price} ₺</span>
                 </div>
                 <p class="card-text small text-muted mb-2">

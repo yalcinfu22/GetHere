@@ -134,10 +134,13 @@ def get_menu_by_restaurant(r_id):
     try:
         cur.execute("""
             SELECT m.m_id, m.menu_id, m.r_id, m.f_id, m.cuisine, m.price, m.created_at,
-                   f.item AS food_name, f.veg_or_non_veg AS veg
+                   f.item AS food_name, f.veg_or_non_veg AS veg,
+                   COUNT(o.o_id) as order_count
             FROM Menu m
             LEFT JOIN Food f ON f.f_id = m.f_id
+            LEFT JOIN Orders o ON m.m_id = o.m_id
             WHERE m.r_id = %s
+            GROUP BY m.m_id
         """, (r_id,))
         return jsonify(cur.fetchall())
     except mysql.connector.Error as err:
