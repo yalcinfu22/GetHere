@@ -247,8 +247,8 @@ def restaurant_submit_signup():
     try:
         # 1. Create Restaurant
         restaurant_query = """
-            INSERT INTO Restaurant (name, city, address, cuisine, phone, description, photo_url)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            INSERT INTO Restaurant (name, city, address, cuisine, phone, description, photo_url, rating, rating_count)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, 3.0, 0)
         """
         restaurant_values = (restaurant_name, city, address, cuisine, phone, description, photo_filename)
         cursor.execute(restaurant_query, restaurant_values)
