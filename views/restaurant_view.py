@@ -372,7 +372,7 @@ def restaurant_info(r_id):
                     LIMIT 1
                 )
             GROUP BY c.c_id, f.item
-            ORDER BY delivery_count DESC
+            ORDER BY delivery_count DESC, avg_rating_for_this_item DESC
             LIMIT 1;
         """
         cursor.execute(spotlight_query, (r_id, r_id))
