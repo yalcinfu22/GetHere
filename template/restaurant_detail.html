@@ -274,6 +274,10 @@
             <p class="fw-bold">Selected: <span id="selName" class="text-primary"></span></p>
             <input type="hidden" id="selFid">
             <input type="hidden" id="selVeg">
+
+            <label>Cuisine Category</label>
+            <input type="text" id="selCuisine" class="form-control mb-2" placeholder="e.g. Italian">
+
             <label>Set Your Price (₺)</label>
             <input type="number" id="selPrice" class="form-control mb-2" placeholder="0.00">
             <button onclick="submitMenuItem()" class="btn btn-success w-100">Add to Menu</button>
@@ -506,7 +510,8 @@
 
       if (!price) return alert("Price is required");
 
-      const payload = { r_id: rId, price: price };
+      const cuisine = document.getElementById('selCuisine').value;
+      const payload = { r_id: rId, price: price, cuisine: cuisine };
 
       if (fid) {
         payload.f_id = fid;
