@@ -407,7 +407,7 @@ def restaurant_info(r_id):
 @restaurant.route('/<int:r_id>/orders')
 def restaurant_orders(r_id):
     """Restaurant orders page"""
-    # DEMO MODE REMOVED: Real security check enabled
+    # Security check
     is_manager = (
         session.get('user_type') == 'restaurant' and
         str(session.get('user_id')) == str(r_id)
@@ -422,7 +422,7 @@ def restaurant_orders(r_id):
 @restaurant.route('/<int:r_id>/<int:o_id>')
 def restaurant_order_details(r_id, o_id):
     """Restaurant orders page"""
-    # DEMO MODE REMOVED: Real security check enabled
+    # Security check
     is_manager = (
         session.get('user_type') == 'restaurant' and
         str(session.get('user_id')) == str(r_id)
