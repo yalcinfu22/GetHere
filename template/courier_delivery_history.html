@@ -300,11 +300,6 @@
             color: var(--text-dark);
         }
 
-        .restaurant-stat-cuisine {
-            font-size: 0.8rem;
-            color: #888;
-        }
-
         .restaurant-stat-values {
             text-align: right;
         }
@@ -419,7 +414,6 @@
                 <div class="restaurant-stat-row">
                     <div>
                         <div class="restaurant-stat-name">{{ stat.restaurant_name }}</div>
-                        <div class="restaurant-stat-cuisine">{{ stat.cuisine or 'Various' }}</div>
                     </div>
                     <div class="restaurant-stat-values">
                         <div class="restaurant-stat-count">{{ stat.delivery_count }} deliveries</div>

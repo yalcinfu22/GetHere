@@ -1,9 +1,6 @@
 import mysql.connector
 from flask import Blueprint, request, jsonify, session
 from helpers.db_helper import get_db_connection
-
-# 1. IMPORTS NEEDED
-# You must import these to use the logic you defined in the other files
 from views.courier_view import find_available_courier
 from views.task_view import create_task
 
@@ -46,10 +43,9 @@ def create_order():
         db.commit()
         new_order_id = mycursor.lastrowid
 
-    # except mysql.connector.Error as err:
-        # db.rollback()
-        # bozuk e-posta hatalarını vs yakalar
-        # return jsonify({"error": f"Database error: {err}"}), 500
+    except mysql.connector.Error as err:
+        db.rollback()
+        return jsonify({"error": f"Database error: {err}"}), 500
     finally:
         mycursor.close()
         db.close()
@@ -194,19 +190,15 @@ def make_an_order():
         if not m_id or not r_id:
             return jsonify({"error": "Missing info"}), 400
 
-        # --- START TRANSACTION ---
         db = get_db_connection()
         if not db: return jsonify({"error": "DB Connection Fail"}), 500
         
         cursor = db.cursor(dictionary=True)
 
-        # 2. USE THE IMPORTED HELPER (Pass the cursor!)
         c_id = find_available_courier(cursor, r_id)
-        
         if not c_id:
             return jsonify({"error": "No courier available"}), 400
 
-        # 3. CREATE ORDER
         cursor.execute("""
             INSERT INTO orders 
             (user_id, r_id, m_id, c_id, sales_amount, sales_qty, currency, IsDelivered)
@@ -215,10 +207,9 @@ def make_an_order():
         
         o_id = cursor.lastrowid
 
-        # 4. USE THE IMPORTED HELPER (Pass the cursor!)
         t_id = create_task(cursor, o_id, c_id, user_id, m_id)
 
-        db.commit() # Success!
+        db.commit()
         
         return jsonify({"message": "Success", "o_id": o_id}), 201
 
@@ -494,6 +485,3 @@ def general_statistics():
     finally:
         cursor.close()
         db.close()
-
-
-    

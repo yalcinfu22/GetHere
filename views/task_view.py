@@ -38,9 +38,3 @@ def create_task(cursor, o_id, c_id, user_id, m_id):
     """, (c_id,))
 
     return task_id
-
-
-# Note: Task-related routes (get_task_details, complete_task) are in courier.py
-# under the /couriers blueprint at:
-#   - GET  /couriers/tasks/api/details/<task_id>
-#   - POST /couriers/tasks/complete/<task_id>

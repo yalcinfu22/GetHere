@@ -21,6 +21,69 @@ def find_available_courier(cursor, r_id):
     row = cursor.fetchone()
     return row["c_id"] if row else None
 
+# ===========================================
+#            LOGIN/SIGNUP
+# ==========================================
+@courier.route('/logout')
+def courier_logout():
+    """Courier logout"""
+    session.clear()
+    return redirect(url_for('home_page.home_page'))
+
+@courier.route('/signup')
+def courier_signup():
+    """Renders the signup HTML page."""
+    return render_template("courier_signup.html") 
+
+@courier.route('/submit_signup', methods=['POST'])
+def submit_signup():
+    """Handles the HTML Form submission."""
+    # 1. Get Data from HTML Form
+    name = request.form.get("first_name")  # Updated to match template
+    surname = request.form.get("last_name")  # Updated to match template
+    email = request.form.get("email")
+    password = request.form.get("password")
+    age = request.form.get("age")
+    
+    # 2. Get Courier Specific Data
+    experience = request.form.get("experience", 0)
+    expected_payment = request.form.get("expected_payment", 100)
+
+    # 3. Hash Password
+    if password:
+        password_hash = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt())
+    else:
+        return "Password required", 400
+
+    # 4. Calculate Payment Range (Logic: Max is 20% higher than min preference)
+    expected_min = float(expected_payment)
+    expected_max = expected_min * 1.2 
+
+    db = db_helper.get_db_connection()
+    cursor = db.cursor()
+
+    # New couriers start with 3.0 rating (trust score) but ratingCount=0
+    query = """
+        INSERT INTO Courier 
+        (name, surname, email, password, Age, experience, expected_payment_min, expected_payment_max, 
+         rating, ratingCount, taskCount, TotalDeliveries) 
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 3.0, 0, 0, 0)
+    """
+    
+    values = (name, surname, email, password_hash, age, experience, expected_min, expected_max)
+
+    try:
+        cursor.execute(query, values)
+        db.commit()
+        print("Courier Registered Successfully via Form")
+        return redirect(url_for("courier.courier_login"))  # Go to login after signup
+    except Exception as e:
+        print(f"Error registering courier: {e}")
+        db.rollback()
+        return f"Registration Failed: {e}", 500
+    finally:
+        cursor.close()
+        db.close()
 
 @courier.route('/login')
 def courier_login():
@@ -63,6 +126,10 @@ def courier_submit_login():
     finally:
         cursor.close()
         db.close()
+
+# =====================================
+#           Home Page for Courier
+# =====================================
 
 @courier.route('/dashboard')
 def courier_dashboard():
@@ -139,6 +206,10 @@ def courier_dashboard():
     finally:
         cursor.close()
         db.close()
+
+# =================================
+#         PROFILE PAGE
+# =================================
 
 # --- Placeholder Routes for Navigation (As requested) ---
 
@@ -278,94 +349,9 @@ def update_profile():
         cursor.close()
         db.close()
 
-
-@courier.route('/rate/<int:courier_id>', methods=['POST'])
-def rate_courier(courier_id):
-    """
-    Rate a courier after delivery.
-    
-    IMPORTANT: New couriers start with 3.0 rating (trust score).
-    To preserve this trust weight, we calculate as if they have 1 initial rating:
-    
-    Formula: new_rating = (current_rating * (ratingCount + 1) + new_score) / (ratingCount + 2)
-    
-    This ensures the initial 3.0 trust rating has weight in the calculation.
-    """
-    # Get rating from request
-    if request.is_json:
-        data = request.get_json()
-        new_score = data.get('rating')
-    else:
-        new_score = request.form.get('rating')
-    
-    if new_score is None:
-        return jsonify({"error": "Rating is required"}), 400
-    
-    try:
-        new_score = float(new_score)
-        if new_score < 0 or new_score > 5:
-            return jsonify({"error": "Rating must be between 0 and 5"}), 400
-    except ValueError:
-        return jsonify({"error": "Invalid rating value"}), 400
-    
-    db = db_helper.get_db_connection()
-    cursor = db.cursor(dictionary=True, buffered=True)
-    
-    try:
-        # Get current courier rating info
-        cursor.execute("""
-            SELECT c_id, rating, ratingCount 
-            FROM Courier 
-            WHERE c_id = %s
-        """, (courier_id,))
-        courier = cursor.fetchone()
-        
-        if not courier:
-            return jsonify({"error": "Courier not found"}), 404
-        
-        current_rating = float(courier['rating'] or 3.0)
-        rating_count = int(courier['ratingCount'] or 0)
-        
-        # Calculate new rating with trust weight (+1 for initial trust rating)
-        # Formula: (current_rating * (ratingCount + 1) + new_score) / (ratingCount + 2)
-        # This treats the initial 3.0 as a real rating that counts
-        weighted_sum = current_rating * (rating_count + 1) + new_score
-        new_rating = weighted_sum / (rating_count + 2)
-        
-        # Round to 1 decimal place
-        new_rating = round(new_rating, 1)
-        
-        # Update courier
-        cursor.execute("""
-            UPDATE Courier 
-            SET rating = %s, ratingCount = ratingCount + 1 
-            WHERE c_id = %s
-        """, (new_rating, courier_id))
-        
-        db.commit()
-        
-        return jsonify({
-            "success": True,
-            "message": "Courier rated successfully",
-            "previous_rating": current_rating,
-            "new_rating": new_rating,
-            "total_ratings": rating_count + 1
-        })
-
-    except Exception as e:
-        db.rollback()
-        print(f"Rate courier error: {e}")
-        return jsonify({"error": str(e)}), 500
-    finally:
-        cursor.close()
-        db.close()
-
-
-@courier.route('/tasks/active')
-def active_tasks_page():
-    return "Detailed Active Tasks Page (To Be Implemented)"
-
-
+# ======================================
+#            TASK RELATED 
+# ======================================
 @courier.route('/tasks/api/details/<int:task_id>', methods=['GET'])
 def get_task_details(task_id):
     """
@@ -499,6 +485,9 @@ def complete_task(task_id):
         cursor.close()
         db.close()
 
+# =====================================
+#          MY RESTAURANT
+# =====================================
 @courier.route('/restaurant/my')
 def my_restaurant_page():
     """
@@ -708,7 +697,7 @@ def leave_restaurant():
 
 
 # ==========================================
-# POSITIONS SYSTEM - Search & Apply
+#                 POSITIONS 
 # ==========================================
 
 @courier.route('/positions/debug', methods=['GET'])
@@ -799,7 +788,6 @@ def search_positions_page():
     finally:
         cursor.close()
         db.close()
-
 
 @courier.route('/positions/api/search', methods=['GET'])
 def api_search_positions():
@@ -1094,11 +1082,6 @@ def api_apply_position(position_id):
         cursor.close()
         db.close()
 
-
-# ==========================================
-# POSITION CREATION (For Restaurant Manager)
-# ==========================================
-
 @courier.route('/positions/create', methods=['POST'])
 def create_position():
     """
@@ -1162,6 +1145,9 @@ def create_position():
         cursor.close()
         db.close()
 
+# ===============================
+#           HISTORY 
+# ===============================
 
 @courier.route('/history')
 def delivery_history_page():
@@ -1212,7 +1198,6 @@ def delivery_history_page():
                 
                 -- Order info
                 o.o_id,
-                o.order_date,
                 o.sales_qty,
                 o.sales_amount,
                 o.currency,
@@ -1232,12 +1217,12 @@ def delivery_history_page():
                 r.city AS restaurant_city,
                 r.cuisine AS restaurant_cuisine,
                 
-                -- Menu info (LEFT OUTER JOIN - can be NULL)
+                -- Menu info (LEFT OUTER JOIN - can be NULL if menu is deleted afterwards)
                 m.m_id,
                 m.price AS menu_price,
                 m.cuisine AS menu_cuisine,
                 
-                -- Food info (LEFT OUTER JOIN - can be NULL)
+                -- Food info (LEFT OUTER JOIN - can be NULL if food is deleted afterwards)
                 f.f_id,
                 f.item AS food_name,
                 f.veg_or_non_veg
@@ -1300,9 +1285,7 @@ def delivery_history_page():
             # Format dates
             if delivery['task_date']:
                 delivery['task_date_formatted'] = delivery['task_date'].strftime('%Y-%m-%d %H:%M')
-            if delivery['order_date']:
-                delivery['order_date_formatted'] = delivery['order_date'].strftime('%Y-%m-%d %H:%M')
-            
+
             # Handle NULL food name
             if not delivery['food_name']:
                 delivery['food_name'] = 'Unknown Item'
@@ -1328,71 +1311,8 @@ def delivery_history_page():
         db.close()
 
 
-@courier.route('/logout')
-def courier_logout():
-    """Courier logout"""
-    session.clear()
-    return redirect(url_for('home_page.home_page'))
-
-@courier.route('/signup')
-def courier_signup():
-    """Renders the signup HTML page."""
-    return render_template("courier_signup.html") 
-
-@courier.route('/submit_signup', methods=['POST'])
-def submit_signup():
-    """Handles the HTML Form submission."""
-    # 1. Get Data from HTML Form
-    name = request.form.get("first_name")  # Updated to match template
-    surname = request.form.get("last_name")  # Updated to match template
-    email = request.form.get("email")
-    password = request.form.get("password")
-    age = request.form.get("age")
-    city = request.form.get("city")
-    phone = request.form.get("phone")
-    
-    # 2. Get Courier Specific Data
-    experience = request.form.get("experience", 0)
-    expected_payment = request.form.get("expected_payment", 100)
-
-    # 3. Hash Password
-    if password:
-        password_hash = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt())
-    else:
-        return "Password required", 400
-
-    # 4. Calculate Payment Range (Logic: Max is 20% higher than min preference)
-    expected_min = float(expected_payment)
-    expected_max = expected_min * 1.2 
-
-    db = db_helper.get_db_connection()
-    cursor = db.cursor()
-
-    # New couriers start with 3.0 rating (trust score) but ratingCount=0
-    query = """
-        INSERT INTO Courier 
-        (name, surname, email, password, Age, experience, expected_payment_min, expected_payment_max, 
-         rating, ratingCount, taskCount, TotalDeliveries) 
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 3.0, 0, 0, 0)
-    """
-    
-    values = (name, surname, email, password_hash, age, experience, expected_min, expected_max)
-
-    try:
-        cursor.execute(query, values)
-        db.commit()
-        print("Courier Registered Successfully via Form")
-        return redirect(url_for("courier.courier_login"))  # Go to login after signup
-    except Exception as e:
-        print(f"Error registering courier: {e}")
-        db.rollback()
-        return f"Registration Failed: {e}", 500
-    finally:
-        cursor.close()
-        db.close()
-
 # ==========================================
-# API ROUTES (JSON - For Mobile/External Apps)
+#            TEST
 # ==========================================
 
 @courier.route("/", methods=["GET"])
