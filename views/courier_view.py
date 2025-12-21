@@ -22,69 +22,11 @@ def find_available_courier(cursor, r_id):
     return row["c_id"] if row else None
 
 
-# ==========================================
-#         SIGNUP/LOGIN/LOGOUT ROUTES
-# ==========================================
-@courier.route('/signup')
-def courier_signup():
-    """Renders the signup HTML page."""
-    return render_template("courier_signup.html") 
-
-@courier.route('/submit_signup', methods=['POST'])
-def submit_signup():
-    """Handles the HTML Form submission."""
-    # 1. Get Data from HTML Form
-    name = request.form.get("first_name")  # Updated to match template
-    surname = request.form.get("last_name")  # Updated to match template
-    email = request.form.get("email")
-    password = request.form.get("password")
-    age = request.form.get("age")
-
-    # 2. Get Courier Specific Data
-    experience = request.form.get("experience", 0)
-    expected_payment = request.form.get("expected_payment", 100)
-
-    # 3. Hash Password
-    if password:
-        password_hash = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt())
-    else:
-        return "Password required", 400
-
-    # 4. Calculate Payment Range (Logic: Max is 20% higher than min preference)
-    expected_min = float(expected_payment)
-    expected_max = expected_min * 1.2 
-
-    db = db_helper.get_db_connection()
-    cursor = db.cursor()
-
-    # New couriers start with 3.0 rating (trust score) but ratingCount=0
-    query = """
-        INSERT INTO Courier 
-        (name, surname, email, password, Age, experience, expected_payment_min, expected_payment_max, 
-         rating, ratingCount, taskCount, TotalDeliveries) 
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 3.0, 0, 0, 0)
-    """
-    
-    values = (name, surname, email, password_hash, age, experience, expected_min, expected_max)
-
-    try:
-        cursor.execute(query, values)
-        db.commit()
-        print("Courier Registered Successfully via Form")
-        return redirect(url_for("courier.courier_login"))  # Go to login after signup
-    except Exception as e:
-        print(f"Error registering courier: {e}")
-        db.rollback()
-        return f"Registration Failed: {e}", 500
-    finally:
-        cursor.close()
-        db.close()
-
 @courier.route('/login')
 def courier_login():
     """Renders the courier login HTML page."""
     return render_template("courier_login.html")
-    
+
 @courier.route('/submit_login', methods=['POST'])
 def courier_submit_login():
     """Handle courier login"""
@@ -122,130 +64,6 @@ def courier_submit_login():
         cursor.close()
         db.close()
 
-@courier.route('/logout')
-def courier_logout():
-    """Courier logout"""
-    session.clear()
-    return redirect(url_for('home_page.home_page'))
-
-# ==================================
-#        POST LOGIN ROUTES
-# ==================================
-
-@courier.route('/profile')
-def profile_page():
-    """
-    Courier Profile Page - View and edit courier information.
-    """
-    if 'user_id' not in session or session.get('user_type') != 'courier':
-        return redirect(url_for('courier.courier_login'))
-    
-    courier_id = session['user_id']
-    db = db_helper.get_db_connection()
-    cursor = db.cursor(dictionary=True, buffered=True)
-    
-    try:
-        cursor.execute("""
-            SELECT c_id, r_id, name, surname, email, Age, Gender, Marital_Status,
-                   experience, rating, ratingCount, taskCount, TotalDeliveries,
-                   expected_payment_min, expected_payment_max, created_at
-            FROM Courier 
-            WHERE c_id = %s
-        """, (courier_id,))
-        courier_info = cursor.fetchone()
-        
-        if not courier_info:
-            return "Courier not found", 404
-        
-        # Convert Decimals to float for template
-        if courier_info['rating']:
-            courier_info['rating'] = float(courier_info['rating'])
-        if courier_info['expected_payment_min']:
-            courier_info['expected_payment_min'] = float(courier_info['expected_payment_min'])
-        if courier_info['expected_payment_max']:
-            courier_info['expected_payment_max'] = float(courier_info['expected_payment_max'])
-        
-        # Get restaurant name if employed
-        restaurant_name = None
-        if courier_info['r_id']:
-            cursor.execute("SELECT name FROM Restaurant WHERE r_id = %s", (courier_info['r_id'],))
-            restaurant = cursor.fetchone()
-            restaurant_name = restaurant['name'] if restaurant else None
-        
-        return render_template('courier_profile.html',
-                             courier=courier_info,
-                             restaurant_name=restaurant_name)
-
-    except Exception as e:
-        print(f"Profile page error: {e}")
-        return f"Error: {e}", 500
-    finally:
-        cursor.close()
-        db.close()
-
-
-@courier.route('/profile/update', methods=['POST'])
-def update_profile():
-    if 'user_id' not in session or session.get('user_type') != 'courier':
-        return redirect(url_for('courier.courier_login'))
-
-    courier_id = session['user_id']
-
-    db = db_helper.get_db_connection()
-    cursor = db.cursor()
-
-    update_fields = []
-    params = []
-
-    if request.form.get('first_name'):
-        update_fields.append("name = %s")
-        params.append(request.form['first_name'])
-
-    if request.form.get('last_name'):
-        update_fields.append("surname = %s")
-        params.append(request.form['last_name'])
-
-    if request.form.get('email'):
-        update_fields.append("email = %s")
-        params.append(request.form['email'])
-
-    if request.form.get('password'):
-        password_hash = bcrypt.hashpw(
-            request.form['password'].encode(),
-            bcrypt.gensalt()
-        )
-        update_fields.append("password = %s")
-        params.append(password_hash)
-
-    if request.form.get('age'):
-        update_fields.append("Age = %s")
-        params.append(int(request.form['age']))
-
-    if request.form.get('experience'):
-        update_fields.append("experience = %s")
-        params.append(int(request.form['experience']))
-
-    if request.form.get('expected_payment_min'):
-        min_pay = float(request.form['expected_payment_min'])
-        update_fields.append("expected_payment_min = %s")
-        update_fields.append("expected_payment_max = %s")
-        params.extend([min_pay, min_pay * 1.2])
-
-    if update_fields:
-        params.append(courier_id)
-        cursor.execute(
-            f"UPDATE Courier SET {', '.join(update_fields)} WHERE c_id = %s",
-            params
-        )
-        db.commit()
-
-    cursor.close()
-    db.close()
-    return redirect(url_for('courier.profile_page'))
-
-# =========================================================
-#                   TASKS ROUTES
-# =========================================================
 @courier.route('/dashboard')
 def courier_dashboard():
     """
@@ -322,6 +140,232 @@ def courier_dashboard():
         cursor.close()
         db.close()
 
+# --- Placeholder Routes for Navigation (As requested) ---
+
+@courier.route('/profile')
+def profile_page():
+    """
+    Courier Profile Page - View and edit courier information.
+    """
+    if 'user_id' not in session or session.get('user_type') != 'courier':
+        return redirect(url_for('courier.courier_login'))
+    
+    courier_id = session['user_id']
+    db = db_helper.get_db_connection()
+    cursor = db.cursor(dictionary=True, buffered=True)
+    
+    try:
+        cursor.execute("""
+            SELECT c_id, r_id, name, surname, email, Age, Gender, Marital_Status,
+                   experience, rating, ratingCount, taskCount, TotalDeliveries,
+                   expected_payment_min, expected_payment_max, created_at
+            FROM Courier 
+            WHERE c_id = %s
+        """, (courier_id,))
+        courier_info = cursor.fetchone()
+        
+        if not courier_info:
+            return "Courier not found", 404
+        
+        # Convert Decimals to float for template
+        if courier_info['rating']:
+            courier_info['rating'] = float(courier_info['rating'])
+        if courier_info['expected_payment_min']:
+            courier_info['expected_payment_min'] = float(courier_info['expected_payment_min'])
+        if courier_info['expected_payment_max']:
+            courier_info['expected_payment_max'] = float(courier_info['expected_payment_max'])
+        
+        # Get restaurant name if employed
+        restaurant_name = None
+        if courier_info['r_id']:
+            cursor.execute("SELECT name FROM Restaurant WHERE r_id = %s", (courier_info['r_id'],))
+            restaurant = cursor.fetchone()
+            restaurant_name = restaurant['name'] if restaurant else None
+        
+        return render_template('courier_profile.html',
+                             courier=courier_info,
+                             restaurant_name=restaurant_name)
+
+    except Exception as e:
+        print(f"Profile page error: {e}")
+        return f"Error: {e}", 500
+    finally:
+        cursor.close()
+        db.close()
+
+
+@courier.route('/profile/update', methods=['POST'])
+def update_profile():
+    """
+    Update courier profile information.
+    """
+    if 'user_id' not in session or session.get('user_type') != 'courier':
+        return redirect(url_for('courier.courier_login'))
+    
+    courier_id = session['user_id']
+    
+    # Get form data
+    name = request.form.get('first_name')
+    surname = request.form.get('last_name')
+    email = request.form.get('email')
+    password = request.form.get('password')
+    age = request.form.get('age')
+    gender = request.form.get('gender')
+    marital_status = request.form.get('marital_status')
+    experience = request.form.get('experience')
+    expected_payment_min = request.form.get('expected_payment_min')
+    
+    db = db_helper.get_db_connection()
+    cursor = db.cursor(dictionary=True, buffered=True)
+    
+    try:
+        # Build update query dynamically
+        update_fields = []
+        params = []
+        
+        if name:
+            update_fields.append("name = %s")
+            params.append(name)
+        if surname:
+            update_fields.append("surname = %s")
+            params.append(surname)
+        if email:
+            update_fields.append("email = %s")
+            params.append(email)
+        if password and password.strip():
+            password_hash = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt())
+            update_fields.append("password = %s")
+            params.append(password_hash)
+        if age:
+            update_fields.append("Age = %s")
+            params.append(int(age))
+        if gender:
+            update_fields.append("Gender = %s")
+            params.append(gender)
+        if marital_status:
+            update_fields.append("Marital_Status = %s")
+            params.append(marital_status)
+        if experience is not None and experience != '':
+            update_fields.append("experience = %s")
+            params.append(int(experience))
+        if expected_payment_min:
+            min_pay = float(expected_payment_min)
+            max_pay = min_pay * 1.2
+            update_fields.append("expected_payment_min = %s")
+            update_fields.append("expected_payment_max = %s")
+            params.append(min_pay)
+            params.append(max_pay)
+        
+        if update_fields:
+            params.append(courier_id)
+            query = f"UPDATE Courier SET {', '.join(update_fields)} WHERE c_id = %s"
+            cursor.execute(query, params)
+            db.commit()
+            
+            # Update session name if changed
+            if name:
+                session['user_name'] = name
+            if surname:
+                session['user_surname'] = surname
+        
+        return redirect(url_for('courier.profile_page'))
+
+    except Exception as e:
+        db.rollback()
+        print(f"Update profile error: {e}")
+        return f"Error updating profile: {e}", 500
+    finally:
+        cursor.close()
+        db.close()
+
+
+@courier.route('/rate/<int:courier_id>', methods=['POST'])
+def rate_courier(courier_id):
+    """
+    Rate a courier after delivery.
+    
+    IMPORTANT: New couriers start with 3.0 rating (trust score).
+    To preserve this trust weight, we calculate as if they have 1 initial rating:
+    
+    Formula: new_rating = (current_rating * (ratingCount + 1) + new_score) / (ratingCount + 2)
+    
+    This ensures the initial 3.0 trust rating has weight in the calculation.
+    """
+    # Get rating from request
+    if request.is_json:
+        data = request.get_json()
+        new_score = data.get('rating')
+    else:
+        new_score = request.form.get('rating')
+    
+    if new_score is None:
+        return jsonify({"error": "Rating is required"}), 400
+    
+    try:
+        new_score = float(new_score)
+        if new_score < 0 or new_score > 5:
+            return jsonify({"error": "Rating must be between 0 and 5"}), 400
+    except ValueError:
+        return jsonify({"error": "Invalid rating value"}), 400
+    
+    db = db_helper.get_db_connection()
+    cursor = db.cursor(dictionary=True, buffered=True)
+    
+    try:
+        # Get current courier rating info
+        cursor.execute("""
+            SELECT c_id, rating, ratingCount 
+            FROM Courier 
+            WHERE c_id = %s
+        """, (courier_id,))
+        courier = cursor.fetchone()
+        
+        if not courier:
+            return jsonify({"error": "Courier not found"}), 404
+        
+        current_rating = float(courier['rating'] or 3.0)
+        rating_count = int(courier['ratingCount'] or 0)
+        
+        # Calculate new rating with trust weight (+1 for initial trust rating)
+        # Formula: (current_rating * (ratingCount + 1) + new_score) / (ratingCount + 2)
+        # This treats the initial 3.0 as a real rating that counts
+        weighted_sum = current_rating * (rating_count + 1) + new_score
+        new_rating = weighted_sum / (rating_count + 2)
+        
+        # Round to 1 decimal place
+        new_rating = round(new_rating, 1)
+        
+        # Update courier
+        cursor.execute("""
+            UPDATE Courier 
+            SET rating = %s, ratingCount = ratingCount + 1 
+            WHERE c_id = %s
+        """, (new_rating, courier_id))
+        
+        db.commit()
+        
+        return jsonify({
+            "success": True,
+            "message": "Courier rated successfully",
+            "previous_rating": current_rating,
+            "new_rating": new_rating,
+            "total_ratings": rating_count + 1
+        })
+
+    except Exception as e:
+        db.rollback()
+        print(f"Rate courier error: {e}")
+        return jsonify({"error": str(e)}), 500
+    finally:
+        cursor.close()
+        db.close()
+
+
+@courier.route('/tasks/active')
+def active_tasks_page():
+    return "Detailed Active Tasks Page (To Be Implemented)"
+
+
 @courier.route('/tasks/api/details/<int:task_id>', methods=['GET'])
 def get_task_details(task_id):
     """
@@ -339,7 +383,7 @@ def get_task_details(task_id):
         # Get complete task details with all related info
         cursor.execute("""
             SELECT 
-                t.t_id, t.o_id, 
+                t.t_id, t.o_id, t.c_id, t.user_id, t.m_id, t.task_date, 
                 t.user_address, t.status,
                 u.name as customer_name, 
                 u.email as customer_email, u.address as customer_full_address,
@@ -365,6 +409,8 @@ def get_task_details(task_id):
             task['sales_amount'] = float(task['sales_amount'])
         if task['food_price']:
             task['food_price'] = float(task['food_price'])
+        if task['task_date']:
+            task['task_date'] = task['task_date'].strftime('%Y-%m-%d %H:%M')
         if task['order_date']:
             task['order_date'] = task['order_date'].strftime('%Y-%m-%d %H:%M')
         
@@ -453,9 +499,6 @@ def complete_task(task_id):
         cursor.close()
         db.close()
 
-# ===============================
-#  RESTAURANT INFO PAGE ROUTES
-# ==============================
 @courier.route('/restaurant/my')
 def my_restaurant_page():
     """
@@ -642,73 +685,8 @@ def leave_restaurant():
 
 
 # ==========================================
-#    POSITIONS SYSTEM - Search & Apply
+# POSITIONS SYSTEM - Search & Apply
 # ==========================================
-
-
-@courier.route('/positions/create', methods=['POST'])
-def create_position():
-    """
-    Creates a new position (job listing).
-    This will be used by Restaurant Managers.
-    Accepts both JSON and form data.
-    """
-    # Get data from either JSON or form
-    if request.is_json:
-        data = request.get_json()
-    else:
-        data = request.form.to_dict()
-    
-    # Required fields
-    r_id = data.get('r_id')
-    payment = data.get('payment')
-    
-    if not r_id or not payment:
-        return jsonify({"error": "Restaurant ID and payment are required"}), 400
-    
-    # Optional fields with defaults
-    city = data.get('city')
-    req_exp = data.get('req_exp', 0)
-    req_rating = data.get('req_rating', 0)
-    
-    db = db_helper.get_db_connection()
-    cursor = db.cursor(dictionary=True, buffered=True)
-    
-    try:
-        # Verify restaurant exists
-        cursor.execute("SELECT r_id, name, city FROM Restaurant WHERE r_id = %s", (r_id,))
-        restaurant = cursor.fetchone()
-        
-        if not restaurant:
-            return jsonify({"error": "Restaurant not found"}), 404
-        
-        # Use restaurant's city if not provided
-        if not city:
-            city = restaurant['city']
-        
-        # Insert new position
-        cursor.execute("""
-            INSERT INTO Positions (r_id, city, req_exp, req_rating, payment, isOpen)
-            VALUES (%s, %s, %s, %s, %s, TRUE)
-        """, (r_id, city, req_exp, req_rating, payment))
-        
-        db.commit()
-        new_position_id = cursor.lastrowid
-        
-        return jsonify({
-            "success": True,
-            "message": "Position created successfully",
-            "position_id": new_position_id,
-            "restaurant_name": restaurant['name']
-        }), 201
-
-    except Exception as e:
-        db.rollback()
-        print(f"Create position error: {e}")
-        return jsonify({"error": str(e)}), 500
-    finally:
-        cursor.close()
-        db.close()
 
 @courier.route('/positions/debug', methods=['GET'])
 def debug_positions():
@@ -1093,6 +1071,75 @@ def api_apply_position(position_id):
         cursor.close()
         db.close()
 
+
+# ==========================================
+# POSITION CREATION (For Restaurant Manager)
+# ==========================================
+
+@courier.route('/positions/create', methods=['POST'])
+def create_position():
+    """
+    Creates a new position (job listing).
+    This will be used by Restaurant Managers.
+    Accepts both JSON and form data.
+    """
+    # Get data from either JSON or form
+    if request.is_json:
+        data = request.get_json()
+    else:
+        data = request.form.to_dict()
+    
+    # Required fields
+    r_id = data.get('r_id')
+    payment = data.get('payment')
+    
+    if not r_id or not payment:
+        return jsonify({"error": "Restaurant ID and payment are required"}), 400
+    
+    # Optional fields with defaults (city is always taken from restaurant)
+    req_exp = data.get('req_exp', 0)
+    req_rating = data.get('req_rating', 0)
+    
+    db = db_helper.get_db_connection()
+    cursor = db.cursor(dictionary=True, buffered=True)
+    
+    try:
+        # Verify restaurant exists and get its city
+        cursor.execute("SELECT r_id, name, city FROM Restaurant WHERE r_id = %s", (r_id,))
+        restaurant = cursor.fetchone()
+        
+        if not restaurant:
+            return jsonify({"error": "Restaurant not found"}), 404
+        
+        # ALWAYS use restaurant's city (ignore any city passed in data)
+        # This ensures Position.city always matches Restaurant.city
+        city = restaurant['city']
+        
+        # Insert new position
+        cursor.execute("""
+            INSERT INTO Positions (r_id, city, req_exp, req_rating, payment, isOpen)
+            VALUES (%s, %s, %s, %s, %s, TRUE)
+        """, (r_id, city, req_exp, req_rating, payment))
+        
+        db.commit()
+        new_position_id = cursor.lastrowid
+        
+        return jsonify({
+            "success": True,
+            "message": "Position created successfully",
+            "position_id": new_position_id,
+            "restaurant_name": restaurant['name']
+        }), 201
+
+    except Exception as e:
+        db.rollback()
+        print(f"Create position error: {e}")
+        return jsonify({"error": str(e)}), 500
+    finally:
+        cursor.close()
+        db.close()
+
+
 @courier.route('/history')
 def delivery_history_page():
     """
@@ -1257,8 +1304,72 @@ def delivery_history_page():
         cursor.close()
         db.close()
 
+
+@courier.route('/logout')
+def courier_logout():
+    """Courier logout"""
+    session.clear()
+    return redirect(url_for('home_page.home_page'))
+
+@courier.route('/signup')
+def courier_signup():
+    """Renders the signup HTML page."""
+    return render_template("courier_signup.html") 
+
+@courier.route('/submit_signup', methods=['POST'])
+def submit_signup():
+    """Handles the HTML Form submission."""
+    # 1. Get Data from HTML Form
+    name = request.form.get("first_name")  # Updated to match template
+    surname = request.form.get("last_name")  # Updated to match template
+    email = request.form.get("email")
+    password = request.form.get("password")
+    age = request.form.get("age")
+    city = request.form.get("city")
+    phone = request.form.get("phone")
+    
+    # 2. Get Courier Specific Data
+    experience = request.form.get("experience", 0)
+    expected_payment = request.form.get("expected_payment", 100)
+
+    # 3. Hash Password
+    if password:
+        password_hash = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt())
+    else:
+        return "Password required", 400
+
+    # 4. Calculate Payment Range (Logic: Max is 20% higher than min preference)
+    expected_min = float(expected_payment)
+    expected_max = expected_min * 1.2 
+
+    db = db_helper.get_db_connection()
+    cursor = db.cursor()
+
+    # New couriers start with 3.0 rating (trust score) but ratingCount=0
+    query = """
+        INSERT INTO Courier 
+        (name, surname, email, password, Age, experience, expected_payment_min, expected_payment_max, 
+         rating, ratingCount, taskCount, TotalDeliveries) 
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 3.0, 0, 0, 0)
+    """
+    
+    values = (name, surname, email, password_hash, age, experience, expected_min, expected_max)
+
+    try:
+        cursor.execute(query, values)
+        db.commit()
+        print("Courier Registered Successfully via Form")
+        return redirect(url_for("courier.courier_login"))  # Go to login after signup
+    except Exception as e:
+        print(f"Error registering courier: {e}")
+        db.rollback()
+        return f"Registration Failed: {e}", 500
+    finally:
+        cursor.close()
+        db.close()
+
 # ==========================================
-# API ROUTES (FIRST WEEK TESTS)
+# API ROUTES (JSON - For Mobile/External Apps)
 # ==========================================
 
 @courier.route("/", methods=["GET"])
