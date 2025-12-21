@@ -225,6 +225,8 @@ def restaurant_submit_signup():
     cuisine = request.form.get("cuisine")
     phone = request.form.get("phone")
     description = request.form.get("description", "")
+    lic_no = request.form.get("lic_no") # New field
+    link = request.form.get("link")     # New field
     
     manager_first_name = request.form.get("manager_first_name")
     manager_last_name = request.form.get("manager_last_name")
@@ -247,10 +249,10 @@ def restaurant_submit_signup():
     try:
         # 1. Create Restaurant
         restaurant_query = """
-            INSERT INTO Restaurant (name, city, address, cuisine, phone, description, photo_url, rating, rating_count)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, 3.0, 0)
+            INSERT INTO Restaurant (name, city, address, cuisine, phone, description, photo_url, lic_no, link, rating, rating_count)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, 3.0, 0)
         """
-        restaurant_values = (restaurant_name, city, address, cuisine, phone, description, photo_filename)
+        restaurant_values = (restaurant_name, city, address, cuisine, phone, description, photo_filename, lic_no, link)
         cursor.execute(restaurant_query, restaurant_values)
         new_restaurant_id = cursor.lastrowid
 

@@ -134,19 +134,21 @@ def import_restaurants(cursor, conn):
     file_path = get_csv_path('restaurant.csv')
     try:
         df = pd.read_csv(file_path, low_memory=False)
-        df.rename(columns={'id': 'r_id', 'menu': 'menu_json'}, inplace=True)
+        df.rename(columns={'id': 'r_id'}, inplace=True)
         df['rating'] = pd.to_numeric(df['rating'], errors='coerce').fillna(0.0)
         df['rating_count'] = df['rating_count'].astype(str).str.extract(r'(\d+)').fillna(0).astype(int)
+        df['cuisine'] = df['cuisine'].astype(str).apply(lambda x: x.split(',')[0].strip())
+
         df = df.where(pd.notnull(df), None)
 
         cols = ['r_id', 'name', 'city', 'rating', 'rating_count', 'cost',
-                'cuisine', 'lic_no', 'link', 'address', 'menu_json']
+                'cuisine', 'lic_no', 'link', 'address']
 
         data = df[cols].values.tolist()
         query = """
         INSERT IGNORE INTO Restaurant
-        (r_id, name, city, rating, rating_count, cost, cuisine, lic_no, link, address, menu_json)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        (r_id, name, city, rating, rating_count, cost, cuisine, lic_no, link, address)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """
         insert_data_in_batches(cursor, conn, query, data, "Restaurant")
     except Exception as e:

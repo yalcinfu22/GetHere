@@ -178,7 +178,7 @@
                     {% if restaurant.photo_url %}
                         <img src="{{ url_for('static', filename='images/restaurants/' + restaurant.photo_url) }}" alt="{{ restaurant.name }}">
                     {% else %}
-                        <i class="bi bi-shop-window"></i>
+                        <img src="https://markantalya.com/wp-content/uploads/2023/02/burgerking.jpg" class="card-img-top" alt="${restaurant.name}">
                     {% endif %}
                 </div>
                 <div class="profile-name">{{ restaurant.name }}</div>
@@ -187,10 +187,10 @@
                 <div class="stats-box">
                     <div class="stat-item">
                         <div class="stat-value">
-                            {{ restaurant.rating or 'N/A' }}
+                            {{ restaurant.rating }}
                             <i class="bi bi-star-fill star"></i>
                         </div>
-                        <div class="stat-label">({{ restaurant.rating_count or 0 }} reviews)</div>
+                        <div class="stat-label">({{ restaurant.rating_count }} reviews)</div>
                     </div>
                 </div>
             </div>

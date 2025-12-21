@@ -28,13 +28,12 @@ CREATE TABLE Restaurant (
     rating_count INT DEFAULT 0,
     cost VARCHAR(50),
     cuisine VARCHAR(100),
-    lic_no VARCHAR(100),
+    lic_no VARCHAR(100) UNIQUE,
     link VARCHAR(255),
     address TEXT,
     phone VARCHAR(30),
     description TEXT,
-    photo_url VARCHAR(255) DEFAULT NULL,
-    menu_json TEXT, 
+    photo_url VARCHAR(255) DEFAULT NULL, 
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
