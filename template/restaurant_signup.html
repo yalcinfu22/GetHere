@@ -9,150 +9,406 @@
     
     <style>
         :root {
+            --primary-orange: #FF6B35;
+            --secondary-orange: #F7931E;
             --restaurant-green: #27AE60;
             --restaurant-dark-green: #229954;
             --light-green: #E8F8F5;
         }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
-            background: linear-gradient(135deg, var(--light-green) 0%, #F0FFF4 100%);
+            min-height: 100vh;
+            background: linear-gradient(135deg, var(--light-green) 0%, #F0FFF4 50%, var(--light-green) 100%);
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            position: relative;
+            overflow-x: hidden;
         }
-        .card {
-            border: none;
-            border-radius: 1rem;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: -50%;
+            right: -10%;
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(39, 174, 96, 0.1) 0%, transparent 70%);
+            border-radius: 50%;
+            z-index: 0;
         }
-        .card-header {
-            background: linear-gradient(135deg, var(--restaurant-green), var(--restaurant-dark-green));
-            color: white;
-            border-top-left-radius: 1rem;
-            border-top-right-radius: 1rem;
+
+        body::after {
+            content: '';
+            position: fixed;
+            bottom: -30%;
+            left: -10%;
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, rgba(34, 153, 84, 0.1) 0%, transparent 70%);
+            border-radius: 50%;
+            z-index: 0;
+        }
+
+        .container {
+            position: relative;
+            z-index: 1;
+        }
+
+        .logo-container {
+            position: absolute;
+            top: 30px;
+            right: 50px;
+            z-index: 10;
+        }
+
+        .logo {
+            width: 120px;
+            height: 120px;
+            background: linear-gradient(135deg, var(--primary-orange), var(--secondary-orange));
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 10px 30px rgba(255, 107, 53, 0.3);
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .logo svg {
+            width: 70px;
+            height: 70px;
+        }
+
+        .registration-wrapper {
+            padding: 4rem 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+        }
+
+        .registration-card {
+            background: white;
+            border-radius: 30px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+            overflow: hidden;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .image-section {
+            background: linear-gradient(135deg, rgba(39, 174, 96, 0.95), rgba(34, 153, 84, 0.95)),
+                        url('https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=800&q=80');
+            background-size: cover;
+            background-position: center;
+            min-height: 700px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 3rem;
+            position: relative;
+        }
+
+        .image-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at center, transparent 0%, rgba(0, 0, 0, 0.2) 100%);
+        }
+
+        .image-content {
+            position: relative;
+            z-index: 2;
             text-align: center;
-            padding: 1.5rem;
-        }
-        .form-section-title {
-            color: var(--restaurant-dark-green);
-            font-weight: 600;
-            border-bottom: 2px solid #e0e0e0;
-            padding-bottom: 0.5rem;
-            margin-top: 1.5rem;
-            margin-bottom: 1rem;
-        }
-        .btn-submit {
-            background: linear-gradient(135deg, var(--restaurant-green), var(--restaurant-dark-green));
-            border: none;
             color: white;
+        }
+
+        .image-icon {
+            width: 150px;
+            height: 150px;
+            margin: 0 auto 2rem;
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .image-icon i {
+            font-size: 4rem;
+            color: white;
+        }
+
+        .image-content h2 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            text-shadow: 2px 2px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        .image-content p {
+            font-size: 1.2rem;
+            opacity: 0.95;
+            line-height: 1.6;
+            max-width: 400px;
+            margin: 0 auto;
+            text-shadow: 1px 1px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        .form-section {
+            padding: 3rem;
+        }
+
+        .form-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .form-header h3 {
+            color: var(--restaurant-dark-green);
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .form-header p {
+            color: #6c757d;
+            font-size: 1rem;
+        }
+
+        .form-label {
+            font-weight: 600;
+            color: #2C3E50;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .form-control, .form-select {
+            border: 2px solid #e9ecef;
+            border-radius: 12px;
+            padding: 0.75rem 1rem;
             transition: all 0.3s ease;
         }
+
+        .form-control:focus, .form-select:focus {
+            border-color: var(--restaurant-green);
+            box-shadow: 0 0 0 0.2rem rgba(39, 174, 96, 0.15);
+        }
+
+        .btn-submit {
+            background: linear-gradient(135deg, var(--restaurant-green), var(--restaurant-dark-green));
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 0.75rem 2rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
         .btn-submit:hover {
             transform: translateY(-2px);
-            box-shadow: 0 4px 15px rgba(39, 174, 96, 0.4);
+            box-shadow: 0 5px 20px rgba(39, 174, 96, 0.4);
+        }
+
+        .btn-reset {
+            background: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 0.75rem 2rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-reset:hover {
+            background: #5a6268;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(108, 117, 125, 0.3);
+        }
+        
+        .login-link {
+            text-align: center;
+            margin-top: 1.5rem;
+        }
+
+        @media (max-width: 1200px) {
+            .logo-container {
+                top: 20px;
+                right: 20px;
+            }
+            
+            .logo {
+                width: 80px;
+                height: 80px;
+            }
+            
+            .logo svg {
+                width: 50px;
+                height: 50px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .image-section {
+                min-height: 300px;
+            }
+            
+            .form-section {
+                padding: 2rem 1.5rem;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="container my-5">
-        <div class="row justify-content-center">
-            <div class="col-12 col-lg-10 col-xl-8">
-                <div class="card">
-                    <div class="card-header">
-                        <h2><i class="bi bi-shop-window"></i> Restaurant Registration</h2>
-                        <p class="mb-0">Join the GetHere platform and grow your business</p>
-                    </div>
-                    <div class="card-body p-4 p-md-5">
-                        <form action="{{ url_for('restaurant.restaurant_submit_signup') }}" method="POST" enctype="multipart/form-data">
-                            
-                            <!-- Restaurant Details -->
-                            <h5 class="form-section-title">Restaurant Details</h5>
-                            <div class="mb-3">
-                                <label for="restaurant_name" class="form-label">Restaurant Name</label>
-                                <input type="text" class="form-control" id="restaurant_name" name="restaurant_name" required>
-                            </div>
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label for="lic_no" class="form-label">License Number</label>
-                                    <input type="text" class="form-control" id="lic_no" name="lic_no">
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <label for="link" class="form-label">Website/Link</label>
-                                    <input type="url" class="form-control" id="link" name="link">
-                                </div>
-                            </div>
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label for="cuisine" class="form-label">Cuisine Type</label>
-                                    <select id="cuisine" name="cuisine" class="form-select" required>
-                                        <option value="">Select cuisine...</option>
-                                        <option value="Turkish">Turkish</option>
-                                        <option value="Italian">Italian</option>
-                                        <option value="Chinese">Chinese</option>
-                                        <option value="Japanese">Japanese</option>
-                                        <option value="American">American</option>
-                                        <option value="Indian">Indian</option>
-                                        <option value="Mexican">Mexican</option>
-                                        <option value="Mediterranean">Mediterranean</option>
-                                        <option value="Fast Food">Fast Food</option>
-                                        <option value="Other">Other</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <label for="phone" class="form-label">Phone Number</label>
-                                    <input type="tel" class="form-control" id="phone" name="phone" required>
-                                </div>
-                            </div>
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label for="city" class="form-label">City</label>
-                                    <input type="text" class="form-control" id="city" name="city" required>
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <label for="address" class="form-label">Address</label>
-                                    <input type="text" class="form-control" id="address" name="address" required>
-                                </div>
-                            </div>
-                            <div class="mb-3">
-                                <label for="description" class="form-label">Description (Optional)</label>
-                                <textarea class="form-control" id="description" name="description" rows="3"></textarea>
-                            </div>
-                            <div class="mb-3">
-                                <label for="photo" class="form-label">Restaurant Photo</label>
-                                <input type="file" class="form-control" id="photo" name="photo">
-                            </div>
+    <div class="logo-container">
+        <div class="logo">
+            <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                <path d="M 35 25 L 35 75 M 30 30 L 30 40 M 35 30 L 35 40 M 40 30 L 40 40" 
+                      stroke="white" stroke-width="3" stroke-linecap="round" fill="none"/>
+                <ellipse cx="62" cy="32" rx="5" ry="7" fill="white"/>
+                <path d="M 62 37 L 62 75" stroke="white" stroke-width="3" stroke-linecap="round"/>
+                <path d="M 25 60 Q 50 55 75 60" stroke="white" stroke-width="2" 
+                      stroke-dasharray="3,3" fill="none" opacity="0.7"/>
+                <polygon points="75,58 80,60 75,62" fill="white" opacity="0.7"/>
+            </svg>
+        </div>
+    </div>
 
-                            <!-- Manager Details -->
-                            <h5 class="form-section-title">Manager Details</h5>
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label for="manager_first_name" class="form-label">First Name</label>
-                                    <input type="text" class="form-control" id="manager_first_name" name="manager_first_name" required>
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <label for="manager_last_name" class="form-label">Last Name</label>
-                                    <input type="text" class="form-control" id="manager_last_name" name="manager_last_name" required>
-                                </div>
-                            </div>
-                             <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label for="email" class="form-label">Email Address</label>
-                                    <input type="email" class="form-control" id="email" name="email" required>
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <label for="password" class="form-label">Password</label>
-                                    <input type="password" class="form-control" id="password" name="password" required>
+    <div class="registration-wrapper">
+        <div class="container">
+            <form action="{{ url_for('restaurant.restaurant_submit_signup') }}" method="POST" enctype="multipart/form-data">
+                <div class="registration-card">
+                    <div class="row g-0">
+                        <div class="col-xl-5 d-none d-xl-block">
+                            <div class="image-section">
+                                <div class="image-content">
+                                    <div class="image-icon">
+                                        <i class="bi bi-shop-window"></i>
+                                    </div>
+                                    <h2>Become a Partner</h2>
+                                    <p>Join the GetHere platform and grow your business. Reach more customers and increase your orders.</p>
                                 </div>
                             </div>
+                        </div>
 
-                            <div class="d-grid gap-2 mt-4">
-                                <button type="submit" class="btn btn-submit btn-lg">Create Account</button>
-                            </div>
+                        <div class="col-xl-7">
+                            <div class="form-section">
+                                <div class="form-header">
+                                    <h3>Sign Up as Restaurant</h3>
+                                    <p>Partner with GetHere to grow your business</p>
+                                </div>
 
-                            <p class="text-center mt-3">
-                                Already have an account? <a href="{{ url_for('restaurant.restaurant_login') }}">Log in here</a>
-                            </p>
-                        </form>
+                                <div class="mb-3">
+                                    <label for="restaurant_name" class="form-label">Restaurant Name</label>
+                                    <input type="text" class="form-control" id="restaurant_name" name="restaurant_name" placeholder="e.g., The Gourmet Place" required>
+                                </div>
+
+                                <div class="row g-3 mb-3">
+                                    <div class="col-md-6">
+                                        <label for="lic_no" class="form-label">License Number</label>
+                                        <input type="text" class="form-control" id="lic_no" name="lic_no" placeholder="e.g., 123-ABC-456">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="link" class="form-label">Website/Link</label>
+                                        <input type="url" class="form-control" id="link" name="link" placeholder="e.g., https://example.com">
+                                    </div>
+                                </div>
+
+                                <div class="row g-3 mb-3">
+                                    <div class="col-md-6">
+                                        <label for="cuisine" class="form-label">Cuisine Type</label>
+                                        <select id="cuisine" name="cuisine" class="form-select" required>
+                                            <option value="">Select cuisine...</option>
+                                            <option value="Turkish">Turkish</option>
+                                            <option value="Italian">Italian</option>
+                                            <option value="Chinese">Chinese</option>
+                                            <option value="Japanese">Japanese</option>
+                                            <option value="American">American</option>
+                                            <option value="Indian">Indian</option>
+                                            <option value="Mexican">Mexican</option>
+                                            <option value="Mediterranean">Mediterranean</option>
+                                            <option value="Fast Food">Fast Food</option>
+                                            <option value="Other">Other</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="phone" class="form-label">Phone Number</label>
+                                        <input type="tel" class="form-control" id="phone" name="phone" placeholder="e.g., +90 555 123 4567" required>
+                                    </div>
+                                </div>
+
+                                <div class="row g-3 mb-3">
+                                     <div class="col-md-6">
+                                        <label for="city" class="form-label">City</label>
+                                        <input type="text" class="form-control" id="city" name="city" placeholder="e.g., Istanbul" required>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="address" class="form-label">Address</label>
+                                        <input type="text" class="form-control" id="address" name="address" placeholder="e.g., 123 Main St" required>
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="description" class="form-label">Description (Optional)</label>
+                                    <textarea class="form-control" id="description" name="description" rows="2" placeholder="Tell us about your restaurant..."></textarea>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="photo" class="form-label">Restaurant Photo</label>
+                                    <input type="file" class="form-control" id="photo" name="photo">
+                                </div>
+
+                                <hr class="my-4">
+
+                                <div class="row g-3 mb-3">
+                                    <div class="col-md-6">
+                                        <label for="manager_first_name" class="form-label">Manager's First Name</label>
+                                        <input type="text" class="form-control" id="manager_first_name" name="manager_first_name" placeholder="e.g., Jane" required>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="manager_last_name" class="form-label">Manager's Last Name</label>
+                                        <input type="text" class="form-control" id="manager_last_name" name="manager_last_name" placeholder="e.g., Doe" required>
+                                    </div>
+                                </div>
+                                
+                                <div class="row g-3 mb-3">
+                                    <div class="col-md-6">
+                                        <label for="email" class="form-label">Email Address</label>
+                                        <input type="email" class="form-control" id="email" name="email" placeholder="e.g., manager@example.com" required>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="password" class="form-label">Password</label>
+                                        <input type="password" class="form-control" id="password" name="password" placeholder="Choose a secure password" required>
+                                    </div>
+                                </div>
+
+                                <div class="d-flex justify-content-end gap-3 mt-4">
+                                    <button type="reset" class="btn btn-reset">Reset All</button>
+                                    <button type="submit" class="btn btn-submit">Create Account</button>
+                                </div>
+
+                                <p class="login-link">
+                                    Already have an account? <a href="{{ url_for('restaurant.restaurant_login') }}">Log in here</a>
+                                </p>
+                            </div>
+                        </div>
                     </div>
                 </div>
-            </div>
+            </form>
         </div>
     </div>
 
