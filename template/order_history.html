@@ -284,10 +284,11 @@
         <div class="order-head">
           <div class="rest">
             <div class="rest-thumb">
-              <img
-                src="{{ o.get('restaurant_image_url', 'https://images.unsplash.com/photo-1550547660-d9450f859349?auto=format&fit=crop&w=300&q=60') }}"
-                alt="Restaurant"
-              >
+           <img
+  src="{{ url_for('static', filename='image/' ~ o.get('restaurant_image_filename', 'default.jpg')) }}"
+  alt="Restaurant"
+  onerror="this.onerror=null;this.src='https://images.unsplash.com/photo-1550547660-d9450f859349?auto=format&fit=crop&w=300&q=60';"
+/>
             </div>
 
             <div class="rest-info">
