@@ -1,66 +1,24 @@
 # GetHere
 
-A food delivery and courier management web application built by a **five-person team** for a database systems term project. Customers place orders, restaurant managers maintain menus and courier positions, and couriers manage applications and deliveries.
+A food delivery and courier management application built by a **five-person team** for a database systems term project. Customers place orders, restaurant managers maintain menus and courier positions, and couriers manage their work and deliveries.
 
 **Python · Flask · MySQL · Jinja2 · HTML/CSS/JavaScript**
 
-This repository is a fork of the team's [original repository](https://github.com/amrtaweel12/Database). The features below describe the team's application.
+## Features
 
-## What the application does
+- **Customers:** restaurant and menu browsing, ordering, order history, and food and courier ratings.
+- **Couriers:** profiles, job searches with eligibility filters, restaurant membership, delivery tasks, and delivery history.
+- **Restaurant managers:** restaurant details, menu management, order views, and courier positions with experience, rating and payment requirements.
 
-| Role | Main workflows |
-| --- | --- |
-| Customer | Register and sign in, browse restaurants and menus, place orders, view order history, and submit food and courier ratings. |
-| Courier | Maintain a profile, search restaurant positions by city, payment and eligibility, join a restaurant, complete delivery tasks, and review delivery history. |
-| Restaurant manager | Register a restaurant, update its details, manage menu items, view orders, and create courier positions with experience, rating and payment requirements. |
+Flask Blueprints separate the application domains, with Jinja2 pages and JSON endpoints backed by direct SQL. The nine-table MySQL schema uses foreign keys, indexes and checks. Registration uses bcrypt password hashing and sign-in uses Flask sessions.
 
-The application uses Flask Blueprints for its domains, server-rendered Jinja2 pages, JSON endpoints for interactive actions, and direct SQL through `mysql-connector-python`. Registration flows hash passwords with bcrypt; sign-in uses Flask sessions.
-
-## Engineering highlights
-
-- **Order and delivery workflow:** the ordering endpoint selects a restaurant's courier by active task count, then rating. It creates the order and delivery task and increments the courier's task count using a shared database transaction. Delivery completion updates the task, order, position and courier records.
-- **Courier job matching:** position searches build parameterized filters for city, restaurant, minimum payment, experience and rating. Joining a position checks eligibility and whether the courier already works for another restaurant.
-- **Relational reporting:** delivery history joins six tables, including two left joins. Restaurant statistics and courier leaderboards use aggregation; the leaderboard also uses a nested subquery and filters deliveries by hire date.
-- **Database constraints:** the schema contains nine related tables, foreign keys, indexes, unique keys and checks for values such as courier age, ratings and nonnegative prices.
-- **Data import:** a pandas-based loader prepares CSV data and inserts it in batches of 2,000 rows.
-
-### Read the code
-
-| Area | Starting point |
-| --- | --- |
-| Application setup and Blueprint registration | [`server.py`](server.py) |
-| Order creation and ratings | [`views/order_view.py`](views/order_view.py) |
-| Courier selection, positions, delivery completion and reporting | [`views/courier_view.py`](views/courier_view.py) |
-| Delivery task creation with a shared cursor | [`views/task_view.py`](views/task_view.py) |
-| Restaurant and manager workflows | [`views/restaurant_view.py`](views/restaurant_view.py) |
-| Schema and constraints | [`databases/term_project.sql`](databases/term_project.sql) |
-| CSV import | [`insert_data.py`](insert_data.py) |
-
-## Database model
-
-| Table | Responsibility |
-| --- | --- |
-| `User` | Customer accounts and addresses |
-| `Restaurant` | Restaurant details and aggregate ratings |
-| `Food` | Food catalogue |
-| `Menu` | Restaurant–food association and price |
-| `Courier` | Courier accounts, employment and delivery counters |
-| `Orders` | Orders, delivery status and customer ratings |
-| `Restaurant_Manager` | Manager accounts linked to restaurants |
-| `Positions` | Courier vacancies, requirements and employment details |
-| `Task` | Delivery assignments linking orders, couriers and customers |
+Order creation selects a courier by task count and rating, then creates the order and delivery task in one transaction. Reporting includes a six-table delivery-history query, grouped statistics and a courier leaderboard. Start with [`order_view.py`](views/order_view.py), [`courier_view.py`](views/courier_view.py) and the [database schema](databases/term_project.sql).
 
 ## Run locally
 
-### Prerequisites
+You need Python 3, Git, a local MySQL server and the `mysql` command-line client. Python dependencies are listed in [`requirements.txt`](requirements.txt).
 
-- Python 3 with `pip` and `venv`
-- A local MySQL server and the `mysql` command-line client
-- Git
-
-The commands below follow the repository's current entry points and configuration. Dependencies are listed without version pins in [`requirements.txt`](requirements.txt).
-
-### 1. Clone and install
+### 1. Install
 
 ```sh
 git clone https://github.com/yalcinfu22/GetHere.git
@@ -68,27 +26,27 @@ cd GetHere
 python -m venv .venv
 ```
 
-Activate the environment on Windows PowerShell:
+Activate the environment:
 
 ```powershell
+# Windows PowerShell
 .\.venv\Scripts\Activate.ps1
 ```
 
-Or on macOS/Linux:
-
 ```sh
+# macOS / Linux
 source .venv/bin/activate
 ```
 
-Then install the dependencies:
+Then install dependencies:
 
 ```sh
 python -m pip install -r requirements.txt
 ```
 
-### 2. Configure the database connection
+### 2. Configure MySQL
 
-Create a `.env` file in the repository root:
+Create `.env` in the repository root:
 
 ```dotenv
 DB_HOST=localhost
@@ -97,36 +55,36 @@ DB_PASSWORD=your_local_mysql_password
 DB_NAME=term_project
 ```
 
-The Flask application reads all four values through [`config/settings.py`](config/settings.py). The optional data loader currently fixes its host, user and database to `localhost`, `root` and `term_project`; only its password comes from `.env`. If you use a different connection, also update `db_config` in `insert_data.py` before importing data.
+The application reads these values through [`config/settings.py`](config/settings.py). The optional data loader uses fixed values for host (`localhost`), user (`root`) and database (`term_project`); only its password comes from `.env`. Update `db_config` in [`insert_data.py`](insert_data.py) if your connection differs.
 
-### 3. Initialize the schema
+### 3. Create the schema
 
-**The schema script drops and recreates `term_project`, deleting any existing data in that database. Use a disposable local database.**
+**The script drops and recreates `term_project`, deleting existing data in that database. Use a disposable local database.**
 
-From the repository root, open the MySQL client:
+From the repository root, open MySQL:
 
 ```sh
 mysql -u root -p
 ```
 
-At its prompt, run:
+Then run at the MySQL prompt:
 
 ```sql
 SOURCE databases/term_project.sql;
 EXIT;
 ```
 
-Some queries use lowercase table names while the schema uses names such as `Orders`, `Courier` and `Restaurant`. On a MySQL installation with case-sensitive table names, normalize these references before running the affected workflows.
+Some queries use lowercase table names while the schema uses names such as `Orders` and `Courier`. For MySQL installations with case-sensitive table names, normalize these references before using the affected workflows.
 
-### 4. Optionally import sample data
+### 4. Import sample data (optional)
 
-The repository currently includes `food.csv`, `users.csv`, `restaurant.csv`, `couriers.csv`, `menu.csv` and `orders.csv` under [`raw_data/`](raw_data/). The original README attributes the seed dataset to [Zomato Database on Kaggle](https://www.kaggle.com/datasets/anas123siddiqui/zomato-database/data).
+Six CSV files are included in [`raw_data/`](raw_data/). To load them:
 
 ```sh
 python insert_data.py
 ```
 
-The loader imports these files, creates sample restaurant managers, and maps historical orders to menu items and a legacy courier. For a manual walkthrough, create fresh accounts through the registration pages; imported customer and courier passwords are copied from the CSV files without being rehashed by the loader.
+The loader processes data in batches of 2,000 rows and creates sample restaurant managers. Imported customer and courier passwords are copied from CSVs without rehashing; create fresh accounts through the registration pages for a manual walkthrough.
 
 ### 5. Start the application
 
@@ -134,33 +92,16 @@ The loader imports these files, creates sample restaurant managers, and maps his
 python server.py
 ```
 
-Open <http://localhost:8080>. `PORT` and `DEBUG` are Python settings in `config/settings.py`.
+Open <http://localhost:8080>. Register through `/users/signup`, `/couriers/signup` or `/restaurant/signup`.
 
-| Entry point | Purpose |
-| --- | --- |
-| `/` | Home page |
-| `/users/signup`, `/users/login` | Customer registration and sign-in |
-| `/couriers/signup`, `/couriers/login` | Courier registration and sign-in |
-| `/restaurant/signup`, `/restaurant/login` | Restaurant manager registration and sign-in |
-| `/couriers/positions/search` | Courier job board |
-| `/couriers/dashboard` | Delivery dashboard |
-| `/couriers/restaurant/my` | Current restaurant and courier leaderboard |
-| `/couriers/history` | Delivery history |
-| `/restaurant/dashboard` | Restaurant management dashboard |
-
-To explore the order flow with new accounts, first create a restaurant and menu item, create a courier position, and have a courier join it. Customer orders require a courier associated with the selected restaurant.
+To try the ordering flow, create a restaurant and menu item, create a courier position, and have a courier join it. Customer orders require a courier associated with that restaurant.
 
 ## Development notes
 
-This is an academic project. `server.py` contains a development session secret, binds to `0.0.0.0`, and runs with debug mode enabled by default. Review these settings and application security before exposing it beyond a local development environment.
+`PORT` and `DEBUG` are set in `config/settings.py`. The server uses a development session secret, enables debug mode and binds to `0.0.0.0`; review these settings and application security before exposing it beyond local development. `.env` is ignored by Git; the sample CSV files are tracked.
 
-`.env` is ignored by Git. The CSV files under `raw_data/` are tracked; only `raw_data/*.local.*` is ignored.
+## Team and credits
 
-## Credits and project documents
+GetHere is a team project; this repository is a fork of the [original team repository](https://github.com/amrtaweel12/Database).
 
-Term project by the GetHere team. UI/UX design and final-report PDF (`GetHere (1).pdf`) are included in the repo. Seed data: [Zomato Database on Kaggle](https://www.kaggle.com/datasets/anas123siddiqui/zomato-database/data).
-
-- [GetHere project document](GetHere%20%281%29.pdf)
-- [Project report](report.pdf)
-- [Original team repository](https://github.com/amrtaweel12/Database)
-
+The repository includes the team's [UI/UX and project document](GetHere%20%281%29.pdf) and [project report](report.pdf). Seed data is credited to [Zomato Database on Kaggle](https://www.kaggle.com/datasets/anas123siddiqui/zomato-database/data).
