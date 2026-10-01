@@ -1,199 +1,166 @@
 # GetHere
 
-A full-stack food delivery platform built as a database systems term project. GetHere connects three distinct user roles — **Customers**, **Couriers**, and **Restaurant Managers** — around a MySQL-backed ordering, dispatch, and delivery pipeline.
+A food delivery and courier management web application built by a **five-person team** for a database systems term project. Customers place orders, restaurant managers maintain menus and courier positions, and couriers manage applications and deliveries.
 
-The application is a Flask monolith rendering server-side Jinja templates, with a MySQL schema of 9 related tables covering users, restaurants, menus, orders, couriers, job positions, and delivery tasks.
+**Python · Flask · MySQL · Jinja2 · HTML/CSS/JavaScript**
 
----
+This repository is a fork of the team's [original repository](https://github.com/amrtaweel12/Database). The features below describe the team's application.
 
-## Features
+## What the application does
 
-### For Customers
-- Sign up / log in with bcrypt-hashed credentials
-- Browse restaurants and their menus
-- Place orders (quantity, pricing, currency)
-- View order history and order details
-- Rate the menu item and the courier after delivery
+| Role | Main workflows |
+| --- | --- |
+| Customer | Register and sign in, browse restaurants and menus, place orders, view order history, and submit food and courier ratings. |
+| Courier | Maintain a profile, search restaurant positions by city, payment and eligibility, join a restaurant, complete delivery tasks, and review delivery history. |
+| Restaurant manager | Register a restaurant, update its details, manage menu items, view orders, and create courier positions with experience, rating and payment requirements. |
 
-### For Couriers
-- Sign up / log in with experience, age, and expected-payment preferences
-- Personal **dashboard** showing active tasks and recent delivery reviews
-- Editable profile (personal info, experience, payment expectations)
-- **Job board**: browse open positions across restaurants, filter by city / minimum payment / specific restaurant, and filter by eligibility (rating & experience requirements)
-- Apply to a position — enforces one-restaurant-at-a-time and checks eligibility
-- **My Restaurant** page with restaurant details, current payment info, and a GROUP-BY leaderboard ranking couriers by `deliveries × avg rating` since their hire date
-- Complete deliveries (updates `Task`, `Orders.IsDelivered`, `Positions.deliveries_made`, `Courier.TotalDeliveries`)
-- Full **delivery history** with multi-join query (Task ⋈ Orders ⋈ User ⋈ Restaurant, LEFT JOIN Menu / Food) and per-restaurant aggregation
-- Leave current position (blocked if the courier has pending deliveries)
+The application uses Flask Blueprints for its domains, server-rendered Jinja2 pages, JSON endpoints for interactive actions, and direct SQL through `mysql-connector-python`. Registration flows hash passwords with bcrypt; sign-in uses Flask sessions.
 
-### For Restaurant Managers
-- Sign up / log in as a manager tied to a specific `Restaurant`
-- Restaurant dashboard with an overview of orders, menu, and couriers
-- Manage restaurant info (address, cuisine, cost, photo upload, description)
-- Manage the menu: add / edit food items and prices
-- Create open courier **positions** with required experience, required rating, and payment — position city is pinned to the restaurant's city
-- View orders associated with the restaurant
+## Engineering highlights
 
-### Ordering & Dispatch Flow
-When a customer places an order:
-1. `Orders` row is created.
-2. A courier is auto-selected from the restaurant's roster via `find_available_courier` — sorted by lowest `taskCount`, then highest `rating`.
-3. A `Task` row is created linking order → courier → user.
-4. The courier's `taskCount` is incremented; on completion it is decremented and `TotalDeliveries` is incremented.
+- **Order and delivery workflow:** the ordering endpoint selects a restaurant's courier by active task count, then rating. It creates the order and delivery task and increments the courier's task count using a shared database transaction. Delivery completion updates the task, order, position and courier records.
+- **Courier job matching:** position searches build parameterized filters for city, restaurant, minimum payment, experience and rating. Joining a position checks eligibility and whether the courier already works for another restaurant.
+- **Relational reporting:** delivery history joins six tables, including two left joins. Restaurant statistics and courier leaderboards use aggregation; the leaderboard also uses a nested subquery and filters deliveries by hire date.
+- **Database constraints:** the schema contains nine related tables, foreign keys, indexes, unique keys and checks for values such as courier age, ratings and nonnegative prices.
+- **Data import:** a pandas-based loader prepares CSV data and inserts it in batches of 2,000 rows.
 
----
+### Read the code
 
-## Tech Stack
+| Area | Starting point |
+| --- | --- |
+| Application setup and Blueprint registration | [`server.py`](server.py) |
+| Order creation and ratings | [`views/order_view.py`](views/order_view.py) |
+| Courier selection, positions, delivery completion and reporting | [`views/courier_view.py`](views/courier_view.py) |
+| Delivery task creation with a shared cursor | [`views/task_view.py`](views/task_view.py) |
+| Restaurant and manager workflows | [`views/restaurant_view.py`](views/restaurant_view.py) |
+| Schema and constraints | [`databases/term_project.sql`](databases/term_project.sql) |
+| CSV import | [`insert_data.py`](insert_data.py) |
 
-- **Backend:** Python 3, Flask (Blueprints)
-- **Database:** MySQL (InnoDB, utf8mb4) via `mysql-connector-python`
-- **Auth:** `bcrypt` password hashing, Flask session cookies
-- **Frontend:** Jinja2 templates, HTML/CSS (server-rendered)
-- **Data ingest:** `pandas` + `numpy` for batch loading the Kaggle Zomato dataset
-- **Config:** `python-dotenv` for environment-based settings
+## Database model
 
----
+| Table | Responsibility |
+| --- | --- |
+| `User` | Customer accounts and addresses |
+| `Restaurant` | Restaurant details and aggregate ratings |
+| `Food` | Food catalogue |
+| `Menu` | Restaurant–food association and price |
+| `Courier` | Courier accounts, employment and delivery counters |
+| `Orders` | Orders, delivery status and customer ratings |
+| `Restaurant_Manager` | Manager accounts linked to restaurants |
+| `Positions` | Courier vacancies, requirements and employment details |
+| `Task` | Delivery assignments linking orders, couriers and customers |
 
-## Project Structure
+## Run locally
 
-```
-Gethere/
-├── server.py                 # Flask app factory + blueprint registration
-├── insert_data.py            # Batch loader for the Kaggle Zomato CSVs
-├── requirements.txt
-├── config/
-│   └── settings.py           # Reads DB_* from .env
-├── databases/
-│   └── term_project.sql      # Full schema (9 tables, constraints, indexes)
-├── helpers/
-│   └── db_helper.py          # MySQL connection helper
-├── views/                    # One blueprint per domain
-│   ├── main_view.py          #   /             - home, router by role
-│   ├── user_view.py          #   /users        - customer auth & pages
-│   ├── courier_view.py       #   /couriers     - courier auth, dashboard, jobs, history
-│   ├── restaurant_view.py    #   /restaurant   - manager auth, dashboard, menu/info mgmt
-│   ├── menu_view.py          #   /menus        - menu CRUD
-│   ├── order_view.py         #   /orders       - order creation & queries
-│   ├── food_view.py          #   /foods        - food CRUD
-│   └── task_view.py          #   internal task creation
-├── template/                 # Jinja2 templates for all pages
-├── static/                   # CSS + uploaded restaurant photos
-└── raw_data/                 # (not committed) Kaggle Zomato CSVs
-```
+### Prerequisites
 
----
+- Python 3 with `pip` and `venv`
+- A local MySQL server and the `mysql` command-line client
+- Git
 
-## Database Schema
-
-Nine related tables defined in `databases/term_project.sql`:
-
-| Table                  | Purpose                                                                 |
-|------------------------|-------------------------------------------------------------------------|
-| `User`                 | Customer accounts                                                       |
-| `Restaurant`           | Restaurant profile (name, city, cuisine, rating, photo, license no.)    |
-| `Food`                 | Food item catalogue (veg/non-veg)                                       |
-| `Menu`                 | Join table: which restaurant serves which food at what price            |
-| `Courier`              | Courier accounts (rating, experience, taskCount, TotalDeliveries, …)    |
-| `Orders`               | Customer orders with `menu_rate` and `courier_rate` ratings             |
-| `Restaurant_Manager`   | Manager accounts, each tied to one `Restaurant` via `managesId`         |
-| `Positions`            | Open/filled courier job listings with `req_exp`, `req_rating`, `payment`|
-| `Task`                 | Delivery assignment linking an order to a courier                       |
-
-Notable constraints: `Courier.Age >= 18`, rating bounds `[0.0, 5.0]`, `Menu.price >= 0`, email format check, cascading FKs chosen per relationship (CASCADE / SET NULL / RESTRICT).
-
----
-
-## Setup
+The commands below follow the repository's current entry points and configuration. Dependencies are listed without version pins in [`requirements.txt`](requirements.txt).
 
 ### 1. Clone and install
 
-```bash
-git clone <repo-url>
-cd Gethere
-python -m venv venv
-source venv/bin/activate        # Windows: venv\Scripts\activate
-pip install -r requirements.txt
+```sh
+git clone https://github.com/yalcinfu22/GetHere.git
+cd GetHere
+python -m venv .venv
 ```
 
-### 2. Download the dataset
+Activate the environment on Windows PowerShell:
 
-The seed data comes from the Kaggle Zomato dataset. Download the CSVs from:
+```powershell
+.\.venv\Scripts\Activate.ps1
+```
 
-<https://www.kaggle.com/datasets/anas123siddiqui/zomato-database/data>
+Or on macOS/Linux:
 
-Place the `.csv` files inside `raw_data/` (the folder is kept out of version control to keep the repo small).
+```sh
+source .venv/bin/activate
+```
 
-### 3. Configure the database
+Then install the dependencies:
 
-Create a MySQL database and user, then create a `.env` file at the project root:
+```sh
+python -m pip install -r requirements.txt
+```
 
-```env
+### 2. Configure the database connection
+
+Create a `.env` file in the repository root:
+
+```dotenv
 DB_HOST=localhost
 DB_USER=root
-DB_PASSWORD=your_password
+DB_PASSWORD=your_local_mysql_password
 DB_NAME=term_project
 ```
 
-Initialize the schema:
+The Flask application reads all four values through [`config/settings.py`](config/settings.py). The optional data loader currently fixes its host, user and database to `localhost`, `root` and `term_project`; only its password comes from `.env`. If you use a different connection, also update `db_config` in `insert_data.py` before importing data.
 
-```bash
-mysql -u root -p < databases/term_project.sql
+### 3. Initialize the schema
+
+**The schema script drops and recreates `term_project`, deleting any existing data in that database. Use a disposable local database.**
+
+From the repository root, open the MySQL client:
+
+```sh
+mysql -u root -p
 ```
 
-### 4. Load the data
+At its prompt, run:
 
-```bash
+```sql
+SOURCE databases/term_project.sql;
+EXIT;
+```
+
+Some queries use lowercase table names while the schema uses names such as `Orders`, `Courier` and `Restaurant`. On a MySQL installation with case-sensitive table names, normalize these references before running the affected workflows.
+
+### 4. Optionally import sample data
+
+The repository currently includes `food.csv`, `users.csv`, `restaurant.csv`, `couriers.csv`, `menu.csv` and `orders.csv` under [`raw_data/`](raw_data/). The original README attributes the seed dataset to [Zomato Database on Kaggle](https://www.kaggle.com/datasets/anas123siddiqui/zomato-database/data).
+
+```sh
 python insert_data.py
 ```
 
-This batch-loads users, restaurants, foods, menus, couriers, orders, and managers from the CSVs (batch size 2000).
+The loader imports these files, creates sample restaurant managers, and maps historical orders to menu items and a legacy courier. For a manual walkthrough, create fresh accounts through the registration pages; imported customer and courier passwords are copied from the CSV files without being rehashed by the loader.
 
-### 5. Run the server
+### 5. Start the application
 
-```bash
+```sh
 python server.py
 ```
 
-The app runs on `http://localhost:8080` by default (configurable via `PORT` in `config/settings.py`).
+Open <http://localhost:8080>. `PORT` and `DEBUG` are Python settings in `config/settings.py`.
 
----
+| Entry point | Purpose |
+| --- | --- |
+| `/` | Home page |
+| `/users/signup`, `/users/login` | Customer registration and sign-in |
+| `/couriers/signup`, `/couriers/login` | Courier registration and sign-in |
+| `/restaurant/signup`, `/restaurant/login` | Restaurant manager registration and sign-in |
+| `/couriers/positions/search` | Courier job board |
+| `/couriers/dashboard` | Delivery dashboard |
+| `/couriers/restaurant/my` | Current restaurant and courier leaderboard |
+| `/couriers/history` | Delivery history |
+| `/restaurant/dashboard` | Restaurant management dashboard |
 
-## Entry Points
+To explore the order flow with new accounts, first create a restaurant and menu item, create a courier position, and have a courier join it. Customer orders require a courier associated with the selected restaurant.
 
-| Path                          | Who it's for                  |
-|-------------------------------|-------------------------------|
-| `/`                           | Landing page / role router    |
-| `/users/login`, `/users/signup`         | Customers          |
-| `/couriers/login`, `/couriers/signup`   | Couriers           |
-| `/restaurant/login`, `/restaurant/signup` | Restaurant managers |
-| `/couriers/dashboard`         | Courier home after login      |
-| `/couriers/positions/search`  | Courier job board             |
-| `/couriers/restaurant/my`     | Current restaurant + leaderboard |
-| `/couriers/history`           | Full delivery history         |
-| `/restaurant/dashboard`       | Manager home after login      |
+## Development notes
 
----
+This is an academic project. `server.py` contains a development session secret, binds to `0.0.0.0`, and runs with debug mode enabled by default. Review these settings and application security before exposing it beyond a local development environment.
 
-## SQL Highlights
+`.env` is ignored by Git. The CSV files under `raw_data/` are tracked; only `raw_data/*.local.*` is ignored.
 
-The project intentionally exercises a range of query patterns to satisfy the term-project requirements. Notable examples:
-
-- **5-table multi-join with LEFT OUTER JOINs** — courier delivery history (`views/courier_view.py::delivery_history_page`)
-- **GROUP BY + aggregation** — per-restaurant courier stats and restaurant leaderboard
-- **Nested subquery** — restaurant leaderboard filters by `r_id = (SELECT r_id FROM Courier WHERE c_id = ?)`
-- **Dynamic WHERE building** — job-board filters assembled based on user-selected criteria
-- **CHECK constraints, cascading FKs, composite indexes** — defined in `databases/term_project.sql`
-
----
-
-## Notes
-
-- Default Flask secret key in `server.py` is a development placeholder — change before any real deployment.
-- `debug=True` is on by default; disable via `DEBUG=False` in config for production.
-- `raw_data/` and `.env` are gitignored.
-
----
-
-## Credits
+## Credits and project documents
 
 Term project by the GetHere team. UI/UX design and final-report PDF (`GetHere (1).pdf`) are included in the repo. Seed data: [Zomato Database on Kaggle](https://www.kaggle.com/datasets/anas123siddiqui/zomato-database/data).
+
+- [GetHere project document](GetHere%20%281%29.pdf)
+- [Project report](report.pdf)
+- [Original team repository](https://github.com/amrtaweel12/Database)
+
